@@ -1,15 +1,8 @@
 /**
- * diff.js – Line-by-line and character-level diff algorithms.
- *
- * computeLineDiff(leftText, rightText)
- *   Returns an array of operations:
- *     { type: 'equal'|'delete'|'insert'|'replace',
- *       leftLine, rightLine, leftNum, rightNum }
- *
- * computeInlineDiff(oldStr, newStr)
- *   Returns an array of char-level operations:
- *     { type: 'equal'|'delete'|'insert', text }
+ * diff.ts – Line-by-line and character-level diff algorithms.
  */
+
+import type { DiffOp, InlineDiffOp } from '@/types';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -24,21 +17,13 @@ const MAX_INLINE_DIFF_COMPLEXITY = 250000;
 
 // ── Line diff ──────────────────────────────────────────────────────────────
 
-/**
- * Split text into lines, stripping a trailing empty line produced by a
- * trailing newline so that the result length equals the visible line count.
- */
-function splitLines(text) {
+function splitLines(text: string): string[] {
   const lines = text.split('\n');
   if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
   return lines;
 }
 
-/**
- * LCS-based line diff.  Falls back to a simple positional diff for very
- * large files to keep the UI responsive.
- */
-function lcsLineDiff(left, right) {
+function lcsLineDiff(left: string[], right: string[]): DiffOp[] {
   const m = left.length;
   const n = right.length;
 
@@ -46,8 +31,7 @@ function lcsLineDiff(left, right) {
     return positionalDiff(left, right);
   }
 
-  // Build LCS table
-  const dp = [];
+  const dp: Uint32Array[] = [];
   for (let i = 0; i <= m; i++) dp.push(new Uint32Array(n + 1));
 
   for (let i = 1; i <= m; i++) {
@@ -58,8 +42,7 @@ function lcsLineDiff(left, right) {
     }
   }
 
-  // Backtrack
-  const ops = [];
+  const ops: DiffOp[] = [];
   let i = m, j = n;
   while (i > 0 || j > 0) {
     if (i > 0 && j > 0 && left[i - 1] === right[j - 1]) {
@@ -76,12 +59,8 @@ function lcsLineDiff(left, right) {
   return ops.reverse();
 }
 
-/**
- * O(n) positional diff used for files > 3000 lines.
- * Pairs up lines by index; lines beyond the shorter side are pure inserts/deletes.
- */
-function positionalDiff(left, right) {
-  const ops = [];
+function positionalDiff(left: string[], right: string[]): DiffOp[] {
+  const ops: DiffOp[] = [];
   const len = Math.max(left.length, right.length);
   for (let i = 0; i < len; i++) {
     if (i < left.length && i < right.length) {
@@ -100,12 +79,8 @@ function positionalDiff(left, right) {
   return ops;
 }
 
-/**
- * Merge adjacent delete+insert pairs into a single 'replace' op so that
- * both sides can be rendered on the same row with inline highlights.
- */
-function mergeReplace(ops) {
-  const result = [];
+function mergeReplace(ops: DiffOp[]): DiffOp[] {
+  const result: DiffOp[] = [];
   let i = 0;
   while (i < ops.length) {
     if (ops[i].type === 'delete' && i + 1 < ops.length && ops[i + 1].type === 'insert') {
@@ -125,7 +100,7 @@ function mergeReplace(ops) {
   return result;
 }
 
-export function computeLineDiff(leftText, rightText) {
+export function computeLineDiff(leftText: string, rightText: string): DiffOp[] {
   const left  = splitLines(leftText  ?? '');
   const right = splitLines(rightText ?? '');
   return mergeReplace(lcsLineDiff(left, right));
@@ -133,10 +108,12 @@ export function computeLineDiff(leftText, rightText) {
 
 // ── Inline (character-level) diff ─────────────────────────────────────────
 
-function lcsCharDiff(a, b) {
+interface CharOp { type: InlineDiffOp['type']; char: string; }
+
+function lcsCharDiff(a: string, b: string): CharOp[] {
   const m = a.length, n = b.length;
 
-  const dp = [];
+  const dp: Uint32Array[] = [];
   for (let i = 0; i <= m; i++) dp.push(new Uint32Array(n + 1));
 
   for (let i = 1; i <= m; i++) {
@@ -147,7 +124,7 @@ function lcsCharDiff(a, b) {
     }
   }
 
-  const ops = [];
+  const ops: CharOp[] = [];
   let i = m, j = n;
   while (i > 0 || j > 0) {
     if (i > 0 && j > 0 && a[i - 1] === b[j - 1]) {
@@ -161,9 +138,8 @@ function lcsCharDiff(a, b) {
   return ops.reverse();
 }
 
-/** Merge consecutive ops of the same type into a single text run. */
-function mergeCharOps(ops) {
-  const result = [];
+function mergeCharOps(ops: CharOp[]): InlineDiffOp[] {
+  const result: InlineDiffOp[] = [];
   let k = 0;
   while (k < ops.length) {
     const type = ops[k].type;
@@ -175,8 +151,7 @@ function mergeCharOps(ops) {
   return result;
 }
 
-export function computeInlineDiff(oldStr, newStr) {
-  // Skip character diff for very long lines — just mark whole line changed
+export function computeInlineDiff(oldStr: string, newStr: string): InlineDiffOp[] {
   if ((oldStr ?? '').length * (newStr ?? '').length > MAX_INLINE_DIFF_COMPLEXITY) {
     return [
       { type: 'delete', text: oldStr ?? '' },

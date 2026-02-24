@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+/* ── Custom diff colours (not easily expressible with Tailwind utilities) ── */
+:root {
+  --diff-ins-bg:      #1a3320;
+  --diff-ins-num:     #122b1a;
+  --diff-ins-border:  #2ea043;
+  --diff-ins-inline:  #14532d;
+
+  --diff-del-bg:      #3a1a1a;
+  --diff-del-num:     #2b1212;
+  --diff-del-border:  #f85149;
+  --diff-del-inline:  #7f1d1d;
+
+  --diff-rep-old-bg:  #33240e;
+  --diff-rep-old-num: #2b1d08;
+  --diff-rep-new-bg:  #1a2e14;
+  --diff-rep-new-num: #122410;
+}
+
+/* ── Scrollbars ── */
+::-webkit-scrollbar            { width: 8px; height: 8px; }
+::-webkit-scrollbar-track      { background: #13131f; }
+::-webkit-scrollbar-thumb      { background: #45475a; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover{ background: #6c7086; }
+
+/* ── Monospace diff cells ── */
+.diff-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid rgba(69,71,90,0.2);
+}
+.diff-row:hover { background: rgba(137,180,250,0.04); }
+.diff-row.current-diff { outline: 2px solid #89b4fa; outline-offset: -2px; }
+
+.diff-cell        { display: flex; align-items: stretch; min-height: 20px; overflow: hidden; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 13px; line-height: 20px; }
+.diff-cell.left   { border-right: 3px solid #13131f; }
+
+.diff-cell.equal        .line-num { background: #2a2a3a; border-right-color: #45475a; }
+.diff-cell.insert       { background: var(--diff-ins-bg); }
+.diff-cell.insert       .line-num { background: var(--diff-ins-num); border-right-color: var(--diff-ins-border); }
+.diff-cell.delete       { background: var(--diff-del-bg); }
+.diff-cell.delete       .line-num { background: var(--diff-del-num); border-right-color: var(--diff-del-border); }
+.diff-cell.replace-old  { background: var(--diff-rep-old-bg); }
+.diff-cell.replace-old  .line-num { background: var(--diff-rep-old-num); border-right-color: #e3b341; }
+.diff-cell.replace-new  { background: var(--diff-rep-new-bg); }
+.diff-cell.replace-new  .line-num { background: var(--diff-rep-new-num); border-right-color: #56d364; }
+.diff-cell.empty {
+  background: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(0,0,0,0.12) 5px, rgba(0,0,0,0.12) 10px);
+  opacity: 0.6;
+}
+.diff-cell.empty .line-num { background: transparent; border-right-color: #45475a; }
+
+.line-num {
+  flex-shrink: 0;
+  width: 46px;
+  padding: 0 6px 0 4px;
+  text-align: right;
+  color: #6c7086;
+  background: #2a2a3a;
+  border-right: 1px solid #45475a;
+  user-select: none;
+  font-size: 11px;
+  line-height: 20px;
+}
+.line-content {
+  flex: 1;
+  padding: 0 8px;
+  white-space: pre;
+  overflow: visible;
+  line-height: 20px;
+  tab-size: 4;
+  color: #cdd6f4;
+}
+
+.inline-del { background: var(--diff-del-inline); border-radius: 2px; }
+.inline-ins { background: var(--diff-ins-inline); border-radius: 2px; }
+
+/* ── Reusable button base classes ── */
+.btn {
+  @apply inline-flex items-center gap-1 px-3 py-1 rounded-md text-[13px]
+         bg-[#313244] text-[#cdd6f4] border border-[#45475a]
+         cursor-pointer select-none whitespace-nowrap
+         transition-colors hover:bg-[#45475a] active:bg-[#585b70];
+}
+.btn-active {
+  @apply bg-[#89b4fa] text-[#1e1e2e] border-[#89b4fa];
+}
+.btn-sm {
+  @apply px-2.5 py-0.5 text-xs;
+}
+
+/* ── Toast animation ── */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+.toast-animate { animation: toast-in 0.2s ease; }
