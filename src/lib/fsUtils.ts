@@ -4,17 +4,40 @@
 
 import type { FolderItem } from '@/types';
 
-export async function listFilesRecursive(
+/**
+ * Directory names that are always skipped during folder comparison.
+ * These are VCS internals, package-manager caches, and bytecode dirs
+ * that users virtually never want to diff.
+ */
+export const IGNORED_DIRS = new Set([
+  // Version control
+  '.git', '.svn', '.hg', '.bzr',
+  // Node / JavaScript
+  'node_modules', 'bower_components',
+  // Python
+  '__pycache__', '.pytest_cache', '.mypy_cache', '.venv', 'venv',
+  // IDE
+  '.idea', '.vs',
+  // OS artefacts
+  '.Spotlight-V100', '.Trashes', '$RECYCLE.BIN',
+]);
+
+async function listFilesRecursive(
   dirHandle: FileSystemDirectoryHandle,
   prefix: string,
   map: Map<string, FileSystemFileHandle>,
+  skipped: Set<string>,
 ): Promise<void> {
   for await (const [name, handle] of dirHandle.entries()) {
+    if (handle.kind === 'directory' && IGNORED_DIRS.has(name)) {
+      skipped.add(name);
+      continue;
+    }
     const path = prefix ? `${prefix}/${name}` : name;
     if (handle.kind === 'file') {
       map.set(path, handle as FileSystemFileHandle);
     } else if (handle.kind === 'directory') {
-      await listFilesRecursive(handle as FileSystemDirectoryHandle, path, map);
+      await listFilesRecursive(handle as FileSystemDirectoryHandle, path, map, skipped);
     }
   }
 }
@@ -22,11 +45,12 @@ export async function listFilesRecursive(
 export async function buildFolderItems(
   leftDirHandle: FileSystemDirectoryHandle,
   rightDirHandle: FileSystemDirectoryHandle,
-): Promise<FolderItem[]> {
+): Promise<{ items: FolderItem[]; ignoredDirNames: string[] }> {
   const leftMap  = new Map<string, FileSystemFileHandle>();
   const rightMap = new Map<string, FileSystemFileHandle>();
-  await listFilesRecursive(leftDirHandle,  '', leftMap);
-  await listFilesRecursive(rightDirHandle, '', rightMap);
+  const skipped  = new Set<string>();
+  await listFilesRecursive(leftDirHandle,  '', leftMap,  skipped);
+  await listFilesRecursive(rightDirHandle, '', rightMap, skipped);
 
   const allPaths = new Set([...leftMap.keys(), ...rightMap.keys()]);
   const items: FolderItem[] = [];
@@ -71,5 +95,5 @@ export async function buildFolderItems(
     }
   }
 
-  return items;
+  return { items, ignoredDirNames: [...skipped].sort() };
 }

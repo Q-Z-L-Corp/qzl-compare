@@ -90,6 +90,37 @@
   @apply px-2.5 py-0.5 text-xs;
 }
 
+/* ── Equal section collapser ── */
+.diff-collapser { border-bottom: 1px solid rgba(69,71,90,0.2); }
+.diff-collapser-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 0;
+}
+.diff-collapser-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 20px;
+  font-size: 11px;
+  color: #6c7086;
+  background: transparent;
+  border: 1px dashed #45475a;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  user-select: none;
+}
+.diff-collapser-btn:hover {
+  background: rgba(69,71,90,0.25);
+  color: #a6adc8;
+  border-color: #6c7086;
+  border-style: solid;
+}
+.diff-collapser-icon { font-size: 9px; opacity: 0.6; }
+
 /* ── Toast animation ── */
 @keyframes toast-in {
   from { opacity: 0; transform: translateX(-50%) translateY(8px); }

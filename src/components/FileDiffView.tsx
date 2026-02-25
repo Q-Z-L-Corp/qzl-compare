@@ -5,6 +5,8 @@ import type { DiffOp, InlineDiffOp } from '@/types';
 import { computeInlineDiff } from '@/lib/diff';
 
 const DIFF_HIGHLIGHT_DURATION = 1500;
+/** Lines of context shown above/below each diff block (like unified-diff). */
+const CONTEXT_LINES = 3;
 
 export interface FileDiffViewHandle {
   scrollToDiff: (idx: number) => void;
@@ -14,6 +16,11 @@ export interface FileDiffViewHandle {
 interface FileDiffViewProps {
   ops: DiffOp[];
   onDiffElementsChange: (count: number) => void;
+}
+
+interface RowEntry {
+  row: HTMLElement;
+  isEqual: boolean;
 }
 
 const FileDiffView = forwardRef<FileDiffViewHandle, FileDiffViewProps>(
@@ -43,14 +50,16 @@ const FileDiffView = forwardRef<FileDiffViewHandle, FileDiffViewProps>(
 
       let leftNum  = 0;
       let rightNum = 0;
-      const frag = document.createDocumentFragment();
+      const allRows: RowEntry[] = [];
 
       for (const op of ops) {
         let row: HTMLElement;
+        let isEqual = false;
         switch (op.type) {
           case 'equal':
             leftNum++;  rightNum++;
             row = buildEqualRow(leftNum, op.leftLine ?? '', rightNum, op.rightLine ?? '');
+            isEqual = true;
             break;
           case 'delete':
             leftNum++;
@@ -70,8 +79,13 @@ const FileDiffView = forwardRef<FileDiffViewHandle, FileDiffViewProps>(
           default:
             continue;
         }
-        frag.appendChild(row);
+        allRows.push({ row, isEqual });
       }
+
+      // Collapse long equal runs into context-mode collapser rows
+      const processedRows = collapseEqualRuns(allRows);
+      const frag = document.createDocumentFragment();
+      for (const r of processedRows) frag.appendChild(r);
       container.appendChild(frag);
       onDiffElementsChange(diffElemsRef.current.length);
     }, [ops, onDiffElementsChange]);
@@ -83,6 +97,87 @@ const FileDiffView = forwardRef<FileDiffViewHandle, FileDiffViewProps>(
 );
 
 export default FileDiffView;
+
+// ── Equal-section collapsing ───────────────────────────────────────────────
+
+function collapseEqualRuns(rows: RowEntry[]): HTMLElement[] {
+  if (rows.length === 0) return [];
+  const result: HTMLElement[] = [];
+  let i = 0;
+
+  while (i < rows.length) {
+    if (!rows[i].isEqual) {
+      result.push(rows[i].row);
+      i++;
+      continue;
+    }
+
+    // Find end of this equal run
+    let runEnd = i;
+    while (runEnd < rows.length && rows[runEnd].isEqual) runEnd++;
+    const runLen = runEnd - i;
+    const isFirstRun = i === 0;
+    const isLastRun  = runEnd === rows.length;
+
+    if (isFirstRun && isLastRun) {
+      // Entire file is equal — show all rows
+      for (let k = i; k < runEnd; k++) result.push(rows[k].row);
+    } else if (isFirstRun) {
+      // Leading equal block: collapse down to last CONTEXT_LINES
+      if (runLen > CONTEXT_LINES) {
+        const hidden = rows.slice(i, runEnd - CONTEXT_LINES).map(r => r.row);
+        result.push(buildCollapserRow(hidden.length, hidden));
+        for (let k = runEnd - CONTEXT_LINES; k < runEnd; k++) result.push(rows[k].row);
+      } else {
+        for (let k = i; k < runEnd; k++) result.push(rows[k].row);
+      }
+    } else if (isLastRun) {
+      // Trailing equal block: keep first CONTEXT_LINES, collapse rest
+      if (runLen > CONTEXT_LINES) {
+        for (let k = i; k < i + CONTEXT_LINES; k++) result.push(rows[k].row);
+        const hidden = rows.slice(i + CONTEXT_LINES, runEnd).map(r => r.row);
+        result.push(buildCollapserRow(hidden.length, hidden));
+      } else {
+        for (let k = i; k < runEnd; k++) result.push(rows[k].row);
+      }
+    } else {
+      // Middle equal block: keep CONTEXT_LINES on each side, collapse middle
+      if (runLen > CONTEXT_LINES * 2 + 1) {
+        for (let k = i; k < i + CONTEXT_LINES; k++) result.push(rows[k].row);
+        const hidden = rows.slice(i + CONTEXT_LINES, runEnd - CONTEXT_LINES).map(r => r.row);
+        result.push(buildCollapserRow(hidden.length, hidden));
+        for (let k = runEnd - CONTEXT_LINES; k < runEnd; k++) result.push(rows[k].row);
+      } else {
+        for (let k = i; k < runEnd; k++) result.push(rows[k].row);
+      }
+    }
+
+    i = runEnd;
+  }
+  return result;
+}
+
+function buildCollapserRow(count: number, hiddenRows: HTMLElement[]): HTMLElement {
+  const row = document.createElement('div');
+  row.className = 'diff-row diff-collapser';
+
+  const inner = document.createElement('div');
+  inner.className = 'diff-collapser-inner';
+
+  const btn = document.createElement('button');
+  btn.className = 'diff-collapser-btn';
+  btn.innerHTML = `<span class="diff-collapser-icon">▼</span>${count} equal line${count !== 1 ? 's' : ''} — click to expand`;
+  btn.addEventListener('click', () => {
+    const parent = row.parentNode;
+    if (!parent) return;
+    for (const hr of hiddenRows) parent.insertBefore(hr, row);
+    row.remove();
+  });
+
+  inner.appendChild(btn);
+  row.appendChild(inner);
+  return row;
+}
 
 // ── Row builders (imperative DOM for performance) ──────────────────────────
 
