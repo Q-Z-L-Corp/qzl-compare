@@ -24,9 +24,9 @@ export default function TextCompareView({
 }: TextCompareViewProps) {
   return (
     <div
-      className="grid shrink-0 border-b border-[#45475a]"
+      className="grid shrink-0 border-b-2 border-[#45475a] bg-[#0f0f1f]"
       /* ~13 visible lines of monospace text at 20px line-height + header */
-      style={{ gridTemplateColumns: '1fr 4px 1fr', height: '260px' }}
+      style={{ gridTemplateColumns: '1fr 3px 1fr', height: '260px' }}
     >
       <TextPanel
         side="left"
@@ -37,7 +37,7 @@ export default function TextCompareView({
         fsApiSupported={fsApiSupported}
       />
       {/* Divider */}
-      <div className="bg-[#13131f]" />
+      <div className="bg-[#45475a]/30" />
       <TextPanel
         side="right"
         text={rightText}
@@ -67,38 +67,38 @@ function TextPanel({ side, text, onChange, onSave, onLoad, fsApiSupported }: Tex
   const hasContent = text.length > 0;
 
   return (
-    <div className="flex flex-col min-h-0 bg-[#1a1a2a]">
+    <div className="flex flex-col min-h-0 bg-[#1a1a2e] border-r border-r-[#45475a]/30 last:border-0">
       {/* Header bar */}
-      <div className="flex items-center gap-2 h-9 px-3 bg-[#2a2a3a] border-b border-[#45475a] shrink-0">
-        <span className="text-xs font-semibold text-[#89b4fa] select-none">{label}</span>
+      <div className="flex items-center gap-2 h-10 px-4 bg-[#0f0f1f] border-b-2 border-[#45475a] shrink-0">
+        <span className="text-xs font-bold text-[#89b4fa] uppercase tracking-wider select-none">{label}</span>
         {hasContent && (
-          <span className="text-[11px] text-[#6c7086] select-none tabular-nums">
-            {lines} line{lines !== 1 ? 's' : ''} · {text.length} chars
+          <span className="text-[11px] text-[#6c7086] select-none tabular-nums ml-2">
+            {lines} line{lines !== 1 ? 's' : ''} • {text.length} char{text.length !== 1 ? 's' : ''}
           </span>
         )}
         <div className="flex gap-1 ml-auto">
           {fsApiSupported && (
             <button
               onClick={onLoad}
-              className="btn btn-sm"
+              className="btn btn-sm text-xs gap-1"
               title={`Load a file into the ${label} panel`}
             >
-              Load…
+              📂 Load
             </button>
           )}
           {fsApiSupported && hasContent && (
             <button
               onClick={onSave}
-              className="btn btn-sm"
+              className="btn btn-sm text-xs gap-1"
               title={`Save ${label} text to a file`}
             >
-              Save…
+              💾 Save
             </button>
           )}
           {hasContent && (
             <button
               onClick={() => onChange('')}
-              className="btn btn-sm text-[#6c7086] hover:text-[#f85149] hover:border-[#f85149]"
+              className="btn btn-sm px-2 text-xs text-[#a6adc8] hover:text-[#f85149] hover:bg-[#3a1e1e] hover:border-[#f85149]"
               title={`Clear ${label} panel`}
             >
               ✕
@@ -111,9 +111,9 @@ function TextPanel({ side, text, onChange, onSave, onLoad, fsApiSupported }: Tex
       <textarea
         value={text}
         onChange={e => onChange(e.target.value)}
-        className="flex-1 w-full bg-[#13131f] text-[#cdd6f4] p-3 resize-none outline-none
-                   font-mono text-[13px] leading-5 placeholder:text-[#45475a]
-                   focus:ring-1 focus:ring-inset focus:ring-[#89b4fa]/40"
+        className="flex-1 w-full bg-[#13131f] text-[#cdd6f4] p-4 resize-none outline-none
+                   font-mono text-[13px] leading-6 placeholder:text-[#45475a]
+                   focus:ring-inset focus:ring-1 focus:ring-[#89b4fa]/50 selection:bg-[#89b4fa]/20"
         style={{ tabSize: 4 }}
         placeholder={`Paste or type ${label.toLowerCase()} text here…`}
         spellCheck={false}

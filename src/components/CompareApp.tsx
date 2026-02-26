@@ -420,7 +420,7 @@ export default function CompareApp() {
         />
       )}
 
-      <main className="flex-1 overflow-hidden flex flex-col">
+      <main className="flex-1 overflow-hidden flex flex-col bg-[#0f0f1f]">
         {mode === 'text' ? (
           // ── Text compare layout: editable panels on top, diff below ──────
           <>

@@ -17,21 +17,23 @@ export default function PanelBar({
   openLabel,
 }: PanelBarProps) {
   return (
-    <div className="grid shrink-0 bg-[#1e1e2e] border-b border-[#45475a]"
-         style={{ gridTemplateColumns: '1fr 4px 1fr' }}>
+    <div className="grid shrink-0 bg-[#0f0f1f] border-b-2 border-[#45475a]"
+         style={{ gridTemplateColumns: '1fr 3px 1fr' }}>
       <PanelPathBar
         path={leftPath}
         meta={leftMeta}
         onOpen={onOpenLeft}
         openLabel={openLabel}
+        side="left"
       />
       {/* Divider */}
-      <div className="bg-[#13131f]" />
+      <div className="bg-[#45475a]/30" />
       <PanelPathBar
         path={rightPath}
         meta={rightMeta}
         onOpen={onOpenRight}
         openLabel={openLabel}
+        side="right"
       />
     </div>
   );
@@ -42,18 +44,25 @@ interface PanelPathBarProps {
   meta?: string;
   onOpen: () => void;
   openLabel: string;
+  side: 'left' | 'right';
 }
 
-function PanelPathBar({ path, meta, onOpen, openLabel }: PanelPathBarProps) {
+function PanelPathBar({ path, meta, onOpen, openLabel, side }: PanelPathBarProps) {
   const icon = openLabel === 'Folder' ? '📁' : '📄';
+  const sideLabel = side === 'left' ? 'Left' : 'Right';
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 bg-[#2a2a3a] overflow-hidden min-h-[38px]">
-      <button onClick={onOpen} className="btn btn-sm shrink-0" title={`Open ${openLabel}`}>
-        {icon} Open…
+    <div className="flex items-center gap-2 px-4 py-2 bg-[#1a1a2e] border-r border-[#45475a]/30 overflow-hidden min-h-[48px] last:border-0">
+      <button 
+        onClick={onOpen} 
+        className="btn btn-sm bg-[#313244] hover:bg-[#3d3d56] border border-[#45475a] gap-1.5 shrink-0 text-[13px] font-medium"
+        title={`Open ${openLabel}`}
+      >
+        {icon} Open
       </button>
       <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
+        <span className="text-[11px] font-bold text-[#89b4fa] uppercase tracking-wider select-none">{sideLabel}</span>
         <span
-          className={`text-xs truncate leading-tight ${path ? 'text-[#cdd6f4] font-medium' : 'text-[#6c7086] italic'}`}
+          className={`text-sm truncate leading-tight ${path ? 'text-[#cdd6f4] font-medium' : 'text-[#6c7086] italic'}`}
           title={path}
         >
           {path || `No ${openLabel.toLowerCase()} selected`}
