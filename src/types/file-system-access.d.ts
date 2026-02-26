@@ -61,8 +61,14 @@ interface DirectoryPickerOptions {
   startIn?: 'desktop' | 'documents' | 'downloads' | 'music' | 'pictures' | 'videos' | FileSystemHandle;
 }
 
+interface SaveFilePickerOptions {
+  suggestedName?: string;
+  types?: Array<{ description?: string; accept: Record<string, string[]> }>;
+  excludeAcceptAllOption?: boolean;
+}
+
 interface Window {
   showOpenFilePicker(options?: OpenFilePickerOptions): Promise<FileSystemFileHandle[]>;
-  showSaveFilePicker(options?: OpenFilePickerOptions): Promise<FileSystemFileHandle>;
+  showSaveFilePicker(options?: SaveFilePickerOptions): Promise<FileSystemFileHandle>;
   showDirectoryPicker(options?: DirectoryPickerOptions): Promise<FileSystemDirectoryHandle>;
 }

@@ -44,7 +44,7 @@ export interface FolderItem {
   rightDate?: Date;
 }
 
-export type AppMode = 'file' | 'folder';
+export type AppMode = 'file' | 'folder' | 'text';
 
 export type FolderFilter = 'all' | FolderItemStatus;
 

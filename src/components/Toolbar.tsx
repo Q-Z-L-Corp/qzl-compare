@@ -68,6 +68,13 @@ export default function Toolbar({
             >
               📁 Folders
             </button>
+            <button
+              onClick={() => onSetMode('text')}
+              className={`btn btn-sm ${mode === 'text' ? 'btn-active' : ''}`}
+              title="Compare two text snippets"
+            >
+              📝 Text
+            </button>
           </div>
           <div className="w-px h-6 bg-[#45475a]" />
         </>

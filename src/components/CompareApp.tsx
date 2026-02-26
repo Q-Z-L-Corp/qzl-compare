@@ -12,10 +12,14 @@ import WelcomeScreen from './WelcomeScreen';
 import LoadingView from './LoadingView';
 import FileDiffView, { FileDiffViewHandle } from './FileDiffView';
 import FolderView from './FolderView';
+import TextCompareView from './TextCompareView';
 import StatusBar from './StatusBar';
 import Toast from './Toast';
 
 type ViewState = 'welcome' | 'loading' | 'diff' | 'folder';
+
+/** Debounce delay for auto-computing the text diff while the user is typing. */
+const TEXT_DIFF_DEBOUNCE_MS = 300;
 
 let toastId = 0;
 
@@ -28,6 +32,13 @@ export default function CompareApp() {
   const [leftDir,   setLeftDir]   = useState<DirInfo  | null>(null);
   const [rightDir,  setRightDir]  = useState<DirInfo  | null>(null);
 
+  // ── Text compare state ────────────────────────────────────────────────────
+  const [leftText,  setLeftText]  = useState('');
+  const [rightText, setRightText] = useState('');
+  /** Ref always mirrors state — used by the debounce timer to avoid stale closures. */
+  const textRef = useRef({ left: '', right: '' });
+  const textDiffTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const [diffOps,          setDiffOps]          = useState<DiffOp[]>([]);
   const [diffCount,        setDiffCount]        = useState(0);
   const [currentDiff,      setCurrentDiff]      = useState(-1);
@@ -36,10 +47,8 @@ export default function CompareApp() {
   const [statusMsg,        setStatusMsg]        = useState('Ready');
   const [statusRight,      setStatusRight]      = useState('');
   const [toasts,           setToasts]           = useState<ToastMessage[]>([]);
-  /** True when the user drilled into a file diff from the folder view. */
   const [fromFolderView,   setFromFolderView]   = useState(false);
 
-  // Avoid hydration mismatch — detect FS API on the client only
   const [fsApiSupported, setFsApiSupported] = useState(false);
   useEffect(() => {
     setFsApiSupported('showOpenFilePicker' in window);
@@ -84,8 +93,8 @@ export default function CompareApp() {
   // ── Keyboard shortcuts ────────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'F7')                         { e.preventDefault(); navigateDiff(-1); }
-      if (e.key === 'F8')                         { e.preventDefault(); navigateDiff(+1); }
+      if (e.key === 'F7')                              { e.preventDefault(); navigateDiff(-1); }
+      if (e.key === 'F8')                              { e.preventDefault(); navigateDiff(+1); }
       if (e.key === 'Home' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); goFirstDiff(); }
       if (e.key === 'End'  && (e.ctrlKey || e.metaKey)) { e.preventDefault(); goLastDiff(); }
     };
@@ -184,6 +193,80 @@ export default function CompareApp() {
     }
   }
 
+  // ── Text compare helpers ──────────────────────────────────────────────────
+  function handleTextChange(side: 'left' | 'right', text: string) {
+    if (side === 'left') {
+      setLeftText(text);
+      textRef.current.left = text;
+    } else {
+      setRightText(text);
+      textRef.current.right = text;
+    }
+    if (textDiffTimer.current) clearTimeout(textDiffTimer.current);
+    textDiffTimer.current = setTimeout(
+      () => runTextDiff(textRef.current.left, textRef.current.right),
+      TEXT_DIFF_DEBOUNCE_MS,
+    );
+  }
+
+  function runTextDiff(left: string, right: string) {
+    if (!left && !right) {
+      setDiffOps([]);
+      setDiffCount(0);
+      setCurrentDiff(-1);
+      setView('welcome');
+      setStatusMsg('Ready');
+      setStatusRight('');
+      return;
+    }
+    const ops   = computeLineDiff(left, right);
+    const diffs = ops.filter(op => op.type !== 'equal').length;
+    setDiffOps(ops);
+    setCurrentDiff(-1);
+    setStatusMsg(`${diffs} difference${diffs !== 1 ? 's' : ''} found`);
+    setStatusRight(`${countLines(left)} / ${countLines(right)} lines`);
+    setView('diff');
+    if (diffs > 0) {
+      setTimeout(() => {
+        setCurrentDiff(0);
+        fileDiffRef.current?.scrollToDiff(0);
+      }, 50);
+    }
+  }
+
+  async function saveTextToFile(side: 'left' | 'right') {
+    if (!fsApiSupported) return;
+    const content = side === 'left' ? textRef.current.left : textRef.current.right;
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: side === 'left' ? 'left.txt' : 'right.txt',
+        types: [{ description: 'Text files', accept: { 'text/plain': ['.txt', '.md', '.log'] } }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(content);
+      await writable.close();
+      addToast(`Saved ${side} text`, 'success');
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name !== 'AbortError') {
+        addToast('Save failed: ' + err.message, 'error');
+      }
+    }
+  }
+
+  async function loadTextFromFile(side: 'left' | 'right') {
+    if (!fsApiSupported) return;
+    try {
+      const [handle] = await window.showOpenFilePicker({ multiple: false });
+      const file    = await handle.getFile();
+      const content = await file.text();
+      handleTextChange(side, content);
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name !== 'AbortError') {
+        addToast('Could not load file: ' + err.message, 'error');
+      }
+    }
+  }
+
   // ── File copy / sync ──────────────────────────────────────────────────────
   async function copyFile(fromSide: 'left' | 'right', toSide: 'left' | 'right') {
     const from = fromSide === 'left' ? leftFile : rightFile;
@@ -276,6 +359,21 @@ export default function CompareApp() {
     setView('folder');
   }
 
+  // ── Mode switch ───────────────────────────────────────────────────────────
+  function handleSetMode(m: AppMode) {
+    setMode(m);
+    setView('welcome');
+    setFromFolderView(false);
+    // If switching back to text mode with existing content, recompute the diff
+    if (m === 'text') {
+      const { left, right } = textRef.current;
+      if (left || right) {
+        if (textDiffTimer.current) clearTimeout(textDiffTimer.current);
+        tick().then(() => runTextDiff(textRef.current.left, textRef.current.right));
+      }
+    }
+  }
+
   // ── Open item dispatcher ──────────────────────────────────────────────────
   function handleOpen(side: 'left' | 'right') {
     if (mode === 'file') openFile(side);
@@ -295,7 +393,7 @@ export default function CompareApp() {
     <div className="flex flex-col h-screen overflow-hidden">
       <Toolbar
         mode={mode}
-        onSetMode={m => { setMode(m); setView('welcome'); setFromFolderView(false); }}
+        onSetMode={handleSetMode}
         diffCount={diffCount}
         currentDiff={currentDiff}
         onFirstDiff={goFirstDiff}
@@ -309,41 +407,81 @@ export default function CompareApp() {
         onBack={handleBackToFolder}
       />
 
-      <PanelBar
-        leftPath={leftPath}
-        rightPath={rightPath}
-        leftMeta={leftMeta}
-        rightMeta={rightMeta}
-        onOpenLeft={() => handleOpen('left')}
-        onOpenRight={() => handleOpen('right')}
-        openLabel={mode === 'file' ? 'File' : 'Folder'}
-      />
+      {/* PanelBar: hidden in text mode (TextCompareView has its own headers) */}
+      {mode !== 'text' && (
+        <PanelBar
+          leftPath={leftPath}
+          rightPath={rightPath}
+          leftMeta={leftMeta}
+          rightMeta={rightMeta}
+          onOpenLeft={() => handleOpen('left')}
+          onOpenRight={() => handleOpen('right')}
+          openLabel={mode === 'file' ? 'File' : 'Folder'}
+        />
+      )}
 
-      <main className="flex-1 overflow-hidden">
-        {view === 'welcome' && (
-          <WelcomeScreen
-            onCompareFiles={() => { setMode('file'); openFile('left'); }}
-            onCompareFolders={() => { setMode('folder'); openFolder('left'); }}
-            fsApiSupported={fsApiSupported}
-          />
-        )}
-        {view === 'loading' && <LoadingView />}
-        {view === 'diff' && (
-          <FileDiffView
-            ref={fileDiffRef}
-            ops={diffOps}
-            onDiffElementsChange={setDiffCount}
-          />
-        )}
-        {view === 'folder' && leftDir && rightDir && (
-          <FolderView
-            items={folderItems}
-            leftDirName={leftDir.name}
-            rightDirName={rightDir.name}
-            ignoredDirNames={ignoredDirNames}
-            onCompare={compareFolderFile}
-            onCopyFile={copyFolderFile}
-          />
+      <main className="flex-1 overflow-hidden flex flex-col">
+        {mode === 'text' ? (
+          // ── Text compare layout: editable panels on top, diff below ──────
+          <>
+            <TextCompareView
+              leftText={leftText}
+              rightText={rightText}
+              onLeftChange={text => handleTextChange('left',  text)}
+              onRightChange={text => handleTextChange('right', text)}
+              onSaveLeft={() => saveTextToFile('left')}
+              onSaveRight={() => saveTextToFile('right')}
+              onLoadLeft={() => loadTextFromFile('left')}
+              onLoadRight={() => loadTextFromFile('right')}
+              fsApiSupported={fsApiSupported}
+            />
+            <div className="flex-1 overflow-hidden">
+              {view === 'diff' ? (
+                <FileDiffView
+                  ref={fileDiffRef}
+                  ops={diffOps}
+                  onDiffElementsChange={setDiffCount}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full gap-3 select-none">
+                  <span className="text-5xl opacity-20">📝</span>
+                  <p className="text-sm text-[#45475a]">
+                    Type or paste text in both panels above to see the comparison
+                  </p>
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          // ── File / Folder modes ───────────────────────────────────────────
+          <>
+            {view === 'welcome' && (
+              <WelcomeScreen
+                onCompareFiles={() => { setMode('file'); openFile('left'); }}
+                onCompareFolders={() => { setMode('folder'); openFolder('left'); }}
+                onCompareText={() => handleSetMode('text')}
+                fsApiSupported={fsApiSupported}
+              />
+            )}
+            {view === 'loading' && <LoadingView />}
+            {view === 'diff' && (
+              <FileDiffView
+                ref={fileDiffRef}
+                ops={diffOps}
+                onDiffElementsChange={setDiffCount}
+              />
+            )}
+            {view === 'folder' && leftDir && rightDir && (
+              <FolderView
+                items={folderItems}
+                leftDirName={leftDir.name}
+                rightDirName={rightDir.name}
+                ignoredDirNames={ignoredDirNames}
+                onCompare={compareFolderFile}
+                onCopyFile={copyFolderFile}
+              />
+            )}
+          </>
         )}
       </main>
 
