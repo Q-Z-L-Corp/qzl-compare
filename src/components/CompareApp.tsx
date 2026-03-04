@@ -457,9 +457,12 @@ export default function CompareApp() {
           <>
             {view === 'welcome' && (
               <WelcomeScreen
-                onCompareFiles={() => { setMode('file'); openFile('left'); }}
-                onCompareFolders={() => { setMode('folder'); openFolder('left'); }}
+                mode={mode}
+                onOpenLeft={() => handleOpen('left')}
+                onOpenRight={() => handleOpen('right')}
                 onCompareText={() => handleSetMode('text')}
+                onSwitchToFiles={() => handleSetMode('file')}
+                onSwitchToFolders={() => handleSetMode('folder')}
                 fsApiSupported={fsApiSupported}
               />
             )}
