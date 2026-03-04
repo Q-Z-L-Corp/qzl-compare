@@ -24,14 +24,19 @@ function parsePatterns(raw: string): string[] {
     .filter(Boolean);
 }
 
-/** Simple glob match: supports *, ?, and plain substring */
+/** Simple glob match: supports *, ?, and plain substring. Caches compiled regexes. */
+const globCache = new Map<string, RegExp>();
 function globMatch(name: string, pattern: string): boolean {
-  // Convert glob to regex
-  const escaped = pattern
-    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-    .replace(/\*/g, '.*')
-    .replace(/\?/g, '.');
-  return new RegExp(`^${escaped}$`, 'i').test(name);
+  let re = globCache.get(pattern);
+  if (!re) {
+    const escaped = pattern
+      .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+      .replace(/\*/g, '.*')
+      .replace(/\?/g, '.');
+    re = new RegExp(`^${escaped}$`, 'i');
+    globCache.set(pattern, re);
+  }
+  return re.test(name);
 }
 
 export function matchesFilter(fileName: string, filters?: FileFilterConfig): boolean {

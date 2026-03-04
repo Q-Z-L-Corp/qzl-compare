@@ -103,15 +103,11 @@ export default function FolderComparePage() {
       const filters = (filterConfig.includePatterns || filterConfig.excludePatterns) ? filterConfig : undefined;
       const { nodes, skippedDirs } = await listChildren(left.handle, right.handle, '', 0, filters);
 
-      if (expandAll) {
-        const expanded = await expandAllRecursive(nodes, filters);
-        setTreeNodes(expanded);
-      } else {
-        setTreeNodes(nodes);
-      }
+      const finalNodes = expandAll ? await expandAllRecursive(nodes, filters) : nodes;
+      setTreeNodes(finalNodes);
 
       setIgnoredDirNames(skippedDirs.sort());
-      const fileCount = countFilesFlat(expandAll ? await expandAllRecursive(nodes, filters) : nodes);
+      const fileCount = countFilesFlat(finalNodes);
       setStatusMsg(`Folder scan complete — ${fileCount} entries`);
       setStatusRight(skippedDirs.length > 0 ? `${skippedDirs.length} dir${skippedDirs.length !== 1 ? 's' : ''} skipped` : '');
       setView('folder');

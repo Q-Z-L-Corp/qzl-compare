@@ -106,7 +106,7 @@ export default function MenuBar({ menus }: MenuBarProps) {
                   >
                     {/* Checkmark area */}
                     <span className="w-5 shrink-0 text-[11px] text-[#89b4fa]">
-                      {entry.checked !== undefined ? (entry.checked ? '✓' : '') : ''}
+                      {entry.checked ? '✓' : ''}
                     </span>
                     <span className="flex-1">{entry.label}</span>
                     {entry.shortcut && (
