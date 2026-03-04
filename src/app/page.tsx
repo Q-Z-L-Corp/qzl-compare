@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import MenuBar, { type MenuDefinition } from '@/components/MenuBar';
 
 type SessionType = {
   id: string;
@@ -10,6 +12,7 @@ type SessionType = {
   description: string;
   href: string;
   color: string;
+  keywords: string[];
 };
 
 const SESSION_TYPES: SessionType[] = [
@@ -20,6 +23,7 @@ const SESSION_TYPES: SessionType[] = [
     description: 'Compare the contents of two folders side by side. Identifies files that are different, added, or removed between directories.',
     href: '/folder-compare',
     color: '#e3b341',
+    keywords: ['folder', 'directory', 'dir', 'tree'],
   },
   {
     id: 'file-compare',
@@ -28,6 +32,7 @@ const SESSION_TYPES: SessionType[] = [
     description: 'Compare two individual files with line-by-line diff highlighting, inline character-level changes, and file sync capabilities.',
     href: '/file-compare',
     color: '#89b4fa',
+    keywords: ['file', 'diff', 'merge', 'sync'],
   },
   {
     id: 'text-compare',
@@ -36,12 +41,57 @@ const SESSION_TYPES: SessionType[] = [
     description: 'Paste or type text directly into two editors and see differences highlighted in real-time. No file system access required.',
     href: '/text-compare',
     color: '#56d364',
+    keywords: ['text', 'paste', 'clipboard', 'string'],
   },
 ];
 
 export default function HomePage() {
+  const router = useRouter();
   const [selected, setSelected] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showAbout, setShowAbout] = useState(false);
   const selectedSession = SESSION_TYPES.find(s => s.id === selected);
+
+  // Filter sessions by search
+  const filteredSessions = useMemo(() => {
+    if (!searchQuery.trim()) return SESSION_TYPES;
+    const q = searchQuery.toLowerCase();
+    return SESSION_TYPES.filter(s =>
+      s.name.toLowerCase().includes(q) ||
+      s.description.toLowerCase().includes(q) ||
+      s.keywords.some(k => k.includes(q))
+    );
+  }, [searchQuery]);
+
+  // ── Menu definitions
+  const menus: MenuDefinition[] = useMemo(() => [
+    {
+      label: 'Session',
+      items: [
+        { label: 'New File Compare', action: () => router.push('/file-compare') },
+        { label: 'New Folder Compare', action: () => router.push('/folder-compare') },
+        { label: 'New Text Compare', action: () => router.push('/text-compare') },
+        { separator: true },
+        { label: 'Close Tab', action: () => window.close() },
+      ],
+    },
+    {
+      label: 'View',
+      items: [
+        { label: 'Folder Compare', action: () => setSelected('folder-compare') },
+        { label: 'File Compare', action: () => setSelected('file-compare') },
+        { label: 'Text Compare', action: () => setSelected('text-compare') },
+        { separator: true },
+        { label: 'Clear Selection', action: () => setSelected(null), disabled: !selected },
+      ],
+    },
+    {
+      label: 'Help',
+      items: [
+        { label: 'About QZL Compare', action: () => setShowAbout(true) },
+      ],
+    },
+  ], [selected, router]);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -54,12 +104,7 @@ export default function HomePage() {
       </header>
 
       {/* Menu bar */}
-      <div className="flex items-center h-8 px-4 bg-[#13131f] border-b border-[#45475a]/50 text-[13px] text-[#a6adc8] shrink-0 gap-4 select-none">
-        <span className="hover:text-[#cdd6f4] cursor-pointer">Session</span>
-        <span className="hover:text-[#cdd6f4] cursor-pointer">View</span>
-        <span className="hover:text-[#cdd6f4] cursor-pointer">Tools</span>
-        <span className="hover:text-[#cdd6f4] cursor-pointer">Help</span>
-      </div>
+      <MenuBar menus={menus} />
 
       {/* Main content: sidebar + main area */}
       <div className="flex flex-1 overflow-hidden">
@@ -80,10 +125,11 @@ export default function HomePage() {
                 New
               </div>
               <div className="ml-3 border-l border-[#45475a]/30">
-                {SESSION_TYPES.map(session => (
+                {filteredSessions.map(session => (
                   <button
                     key={session.id}
                     onClick={() => setSelected(session.id)}
+                    onDoubleClick={() => router.push(session.href)}
                     className={`flex items-center gap-2 w-full px-3 py-1.5 text-[13px] text-left rounded-r-md transition-colors ${
                       selected === session.id
                         ? 'bg-[#89b4fa]/15 text-[#89b4fa] border-l-2 border-[#89b4fa] -ml-px'
@@ -94,24 +140,27 @@ export default function HomePage() {
                     <span className="truncate">{session.name}</span>
                   </button>
                 ))}
-              </div>
-            </div>
-
-            {/* Recent section placeholder */}
-            <div className="mb-3">
-              <div className="flex items-center gap-1.5 px-2 py-1 text-xs font-semibold text-[#cdd6f4] select-none">
-                <span className="text-[10px] text-[#6c7086]">▸</span>
-                <span className="text-[#6c7086]">🕒</span>
-                <span className="text-[#6c7086]">Recent</span>
+                {filteredSessions.length === 0 && (
+                  <div className="px-3 py-2 text-xs text-[#6c7086]">No matches for &ldquo;{searchQuery}&rdquo;</div>
+                )}
               </div>
             </div>
           </div>
 
           {/* Sidebar footer: search */}
           <div className="border-t border-[#45475a] px-3 py-2 shrink-0">
-            <div className="flex items-center gap-2 px-2 py-1.5 bg-[#0a0a12] rounded border border-[#45475a]/50 text-xs text-[#6c7086]">
-              <span>🔍</span>
-              <span>Search sessions…</span>
+            <div className="flex items-center gap-2 px-2 py-1.5 bg-[#0a0a12] rounded border border-[#45475a]/50 text-xs">
+              <span className="text-[#6c7086]">🔍</span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search sessions…"
+                className="flex-1 bg-transparent text-[#cdd6f4] outline-none placeholder:text-[#6c7086]"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="text-[#6c7086] hover:text-[#cdd6f4]">✕</button>
+              )}
             </div>
           </div>
         </aside>
@@ -167,7 +216,6 @@ export default function HomePage() {
                   <Link
                     key={session.id}
                     href={session.href}
-                    onClick={() => setSelected(session.id)}
                     className="group flex flex-col items-center gap-3 p-6 rounded-xl bg-[#1a1a2e] border border-[#45475a]/50 hover:border-[#89b4fa]/50 hover:bg-[#1e1e3a] transition-all hover:shadow-lg hover:shadow-[#89b4fa]/5 cursor-pointer"
                   >
                     <div className="text-5xl group-hover:scale-110 transition-transform">{session.icon}</div>
@@ -194,6 +242,19 @@ export default function HomePage() {
         </span>
         <span className="text-[#6c7086]">QZL Compare v0.1.0</span>
       </footer>
+
+      {/* About dialog */}
+      {showAbout && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60" onClick={() => setShowAbout(false)}>
+          <div className="bg-[#1a1a2e] border border-[#45475a] rounded-xl shadow-2xl p-6 max-w-sm text-center" onClick={e => e.stopPropagation()}>
+            <div className="text-5xl mb-3">⚖️</div>
+            <h2 className="text-xl font-bold text-[#cdd6f4] mb-1">QZL Compare</h2>
+            <p className="text-sm text-[#a6adc8] mb-2">Version 0.1.0</p>
+            <p className="text-xs text-[#6c7086] mb-4">Free browser-based file & folder comparison tool.<br/>All processing happens locally in your browser.</p>
+            <button onClick={() => setShowAbout(false)} className="btn">Close</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

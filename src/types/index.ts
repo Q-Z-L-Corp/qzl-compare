@@ -62,3 +62,27 @@ export interface ComparisonOptions {
   ignoreLineEndings: boolean;
   showLineNumbers: boolean;
 }
+
+// ── Folder tree types ─────────────────────────────────────────────────────
+
+export interface FolderTreeNode {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  status: FolderItemStatus;
+  leftHandle?: FileSystemFileHandle | FileSystemDirectoryHandle;
+  rightHandle?: FileSystemFileHandle | FileSystemDirectoryHandle;
+  leftSize?: number;
+  rightSize?: number;
+  leftDate?: Date;
+  rightDate?: Date;
+  children: FolderTreeNode[];
+  expanded: boolean;
+  loaded: boolean;
+  depth: number;
+}
+
+export interface FileFilterConfig {
+  includePatterns: string;
+  excludePatterns: string;
+}
