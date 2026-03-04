@@ -422,11 +422,14 @@ export default function CompareApp() {
 
       <main className="flex-1 overflow-hidden flex flex-col bg-[#0f0f1f]">
         {mode === 'text' ? (
-          // ── Text compare layout: editable panels on top, diff below ──────
+          // ── Text compare layout: diff view with file paths and inline editors ──────
           <>
             <TextCompareView
+              ops={diffOps}
               leftText={leftText}
               rightText={rightText}
+              leftPath="Left Text"
+              rightPath="Right Text"
               onLeftChange={text => handleTextChange('left',  text)}
               onRightChange={text => handleTextChange('right', text)}
               onSaveLeft={() => saveTextToFile('left')}
@@ -435,22 +438,6 @@ export default function CompareApp() {
               onLoadRight={() => loadTextFromFile('right')}
               fsApiSupported={fsApiSupported}
             />
-            <div className="flex-1 overflow-hidden">
-              {view === 'diff' ? (
-                <FileDiffView
-                  ref={fileDiffRef}
-                  ops={diffOps}
-                  onDiffElementsChange={setDiffCount}
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full gap-3 select-none">
-                  <span className="text-5xl opacity-20">📝</span>
-                  <p className="text-sm text-[#45475a]">
-                    Type or paste text in both panels above to see the comparison
-                  </p>
-                </div>
-              )}
-            </div>
           </>
         ) : (
           // ── File / Folder modes ───────────────────────────────────────────

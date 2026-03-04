@@ -1,11 +1,16 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
+import type { DiffOp } from '@/types';
+import TextDiffView from './TextDiffView';
 import { countLines } from '@/lib/formatters';
 
 interface TextCompareViewProps {
+  ops: DiffOp[];
   leftText: string;
   rightText: string;
+  leftPath?: string;
+  rightPath?: string;
   onLeftChange: (text: string) => void;
   onRightChange: (text: string) => void;
   onSaveLeft: () => void;
@@ -16,43 +21,107 @@ interface TextCompareViewProps {
 }
 
 export default function TextCompareView({
+  ops,
   leftText, rightText,
+  leftPath, rightPath,
   onLeftChange, onRightChange,
   onSaveLeft, onSaveRight,
   onLoadLeft, onLoadRight,
   fsApiSupported,
 }: TextCompareViewProps) {
+  const [showEditors, setShowEditors] = useState(false);
+  
+  const leftLines = useMemo(() => countLines(leftText), [leftText]);
+  const rightLines = useMemo(() => countLines(rightText), [rightText]);
+  const diffCount = useMemo(() => ops.filter(op => op.type !== 'equal').length, [ops]);
+
   return (
-    <div
-      className="grid shrink-0 border-b-2 border-[#45475a] bg-[#0f0f1f]"
-      /* ~13 visible lines of monospace text at 20px line-height + header */
-      style={{ gridTemplateColumns: '1fr 3px 1fr', height: '260px' }}
-    >
-      <TextPanel
-        side="left"
-        text={leftText}
-        onChange={onLeftChange}
-        onSave={onSaveLeft}
-        onLoad={onLoadLeft}
-        fsApiSupported={fsApiSupported}
-      />
-      {/* Divider */}
-      <div className="bg-[#45475a]/30" />
-      <TextPanel
-        side="right"
-        text={rightText}
-        onChange={onRightChange}
-        onSave={onSaveRight}
-        onLoad={onLoadRight}
-        fsApiSupported={fsApiSupported}
-      />
+    <div className="flex flex-col h-full bg-[#0f0f1f]">
+      {/* File paths bar */}
+      <div className="grid shrink-0 bg-[#0a0a12] border-b-2 border-[#45475a]"
+           style={{ gridTemplateColumns: '1fr 3px 1fr' }}>
+        <PathBar side="left" path={leftPath} />
+        <div className="bg-[#45475a]/30" />
+        <PathBar side="right" path={rightPath} />
+      </div>
+
+      {/* Diff view with diff lines comparison */}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        <TextDiffView
+          ops={ops}
+          onLeftChange={onLeftChange}
+          onRightChange={onRightChange}
+        />
+      </div>
+
+      {/* Inline editors toggle */}
+      {showEditors && (
+        <div className="border-t-2 border-[#45475a] bg-[#0f0f1f]" style={{ height: '260px' }}>
+          <div className="grid h-full"
+               style={{ gridTemplateColumns: '1fr 3px 1fr' }}>
+            <EditPanel
+              side="left"
+              text={leftText}
+              onChange={onLeftChange}
+              onSave={onSaveLeft}
+              onLoad={onLoadLeft}
+              fsApiSupported={fsApiSupported}
+            />
+            <div className="bg-[#45475a]/30" />
+            <EditPanel
+              side="right"
+              text={rightText}
+              onChange={onRightChange}
+              onSave={onSaveRight}
+              onLoad={onLoadRight}
+              fsApiSupported={fsApiSupported}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Status & control bar */}
+      <div className="flex items-center justify-between h-9 px-4 bg-[#0a0a12] border-t-2 border-[#45475a] shrink-0 text-xs text-[#a6adc8]">
+        <div className="flex items-center gap-3">
+          <span className="text-[#6c7086]">
+            📊 {diffCount} difference{diffCount !== 1 ? 's' : ''}
+          </span>
+          <span className="text-[#6c7086]">•</span>
+          <span>{leftLines} lines • {rightLines} lines</span>
+        </div>
+        <button
+          onClick={() => setShowEditors(!showEditors)}
+          className={`btn btn-sm text-xs ${showEditors ? 'btn-active' : 'bg-[#313244]'}`}
+        >
+          {showEditors ? '🔍 View' : '✏️ Edit'}
+        </button>
+      </div>
     </div>
   );
 }
 
-// ── Single editable panel ──────────────────────────────────────────────────
+interface PathBarProps {
+  side: 'left' | 'right';
+  path?: string;
+}
 
-interface TextPanelProps {
+function PathBar({ side, path }: PathBarProps) {
+  return (
+    <div className="flex items-center gap-3 h-10 px-4 bg-[#1a1a2e] border-r border-r-[#45475a]/30 last:border-0 overflow-hidden">
+      <span className="text-xs font-bold text-[#89b4fa] uppercase tracking-wider select-none whitespace-nowrap">
+        {side === 'left' ? 'Left' : 'Right'}
+      </span>
+      <span
+        className={`text-sm font-mono truncate ${path ? 'text-[#cdd6f4]' : 'text-[#6c7086] italic'}`}
+        title={path}
+      >
+        {path || '(No file)'}
+      </span>
+    </div>
+  );
+}
+
+interface EditPanelProps {
   side: 'left' | 'right';
   text: string;
   onChange: (text: string) => void;
@@ -61,14 +130,14 @@ interface TextPanelProps {
   fsApiSupported: boolean;
 }
 
-function TextPanel({ side, text, onChange, onSave, onLoad, fsApiSupported }: TextPanelProps) {
+function EditPanel({ side, text, onChange, onSave, onLoad, fsApiSupported }: EditPanelProps) {
   const label = side === 'left' ? 'Left' : 'Right';
   const lines = useMemo(() => countLines(text), [text]);
   const hasContent = text.length > 0;
 
   return (
-    <div className="flex flex-col min-h-0 bg-[#1a1a2e] border-r border-r-[#45475a]/30 last:border-0">
-      {/* Header bar */}
+    <div className="flex flex-col min-h-0 bg-[#1a1a2e]">
+      {/* Header */}
       <div className="flex items-center gap-2 h-10 px-4 bg-[#0f0f1f] border-b-2 border-[#45475a] shrink-0">
         <span className="text-xs font-bold text-[#89b4fa] uppercase tracking-wider select-none">{label}</span>
         {hasContent && (
@@ -107,7 +176,7 @@ function TextPanel({ side, text, onChange, onSave, onLoad, fsApiSupported }: Tex
         </div>
       </div>
 
-      {/* Editable textarea */}
+      {/* Editor */}
       <textarea
         value={text}
         onChange={e => onChange(e.target.value)}
