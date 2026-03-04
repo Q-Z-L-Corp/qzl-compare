@@ -186,8 +186,8 @@ export default function FolderComparePage() {
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       {/* Title bar */}
-      <header className="flex items-center h-10 px-4 bg-[#0a0a12] border-b border-[#45475a] shrink-0">
-        <div className="flex items-center gap-2 text-[#89b4fa] font-bold text-sm select-none">
+      <header className="flex items-center h-10 px-4 bg-[#12161c] border-b border-[#4b5563] shrink-0">
+        <div className="flex items-center gap-2 text-[#cc3333] font-bold text-sm select-none">
           <span className="text-lg">⚖️</span>
           <span className="tracking-tight">
             {view === 'file-diff' && leftFile
@@ -199,39 +199,39 @@ export default function FolderComparePage() {
       </header>
 
       {/* Menu bar */}
-      <div className="flex items-center h-8 px-4 bg-[#13131f] border-b border-[#45475a]/50 text-[13px] text-[#a6adc8] shrink-0 gap-4 select-none">
-        <span className="hover:text-[#cdd6f4] cursor-pointer">Session</span>
-        <span className="hover:text-[#cdd6f4] cursor-pointer">Actions</span>
-        <span className="hover:text-[#cdd6f4] cursor-pointer">Edit</span>
-        <span className="hover:text-[#cdd6f4] cursor-pointer">Search</span>
-        <span className="hover:text-[#cdd6f4] cursor-pointer">View</span>
-        <span className="hover:text-[#cdd6f4] cursor-pointer">Tools</span>
-        <span className="hover:text-[#cdd6f4] cursor-pointer">Help</span>
+      <div className="flex items-center h-8 px-4 bg-[#1e242c] border-b border-[#4b5563]/50 text-[13px] text-[#9ca3af] shrink-0 gap-4 select-none">
+        <span className="hover:text-[#e5e7eb] cursor-pointer">Session</span>
+        <span className="hover:text-[#e5e7eb] cursor-pointer">Actions</span>
+        <span className="hover:text-[#e5e7eb] cursor-pointer">Edit</span>
+        <span className="hover:text-[#e5e7eb] cursor-pointer">Search</span>
+        <span className="hover:text-[#e5e7eb] cursor-pointer">View</span>
+        <span className="hover:text-[#e5e7eb] cursor-pointer">Tools</span>
+        <span className="hover:text-[#e5e7eb] cursor-pointer">Help</span>
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center gap-1 h-11 px-3 bg-[#0a0a12] border-b-2 border-[#45475a] shrink-0 overflow-x-auto">
+      <div className="flex items-center gap-1 h-11 px-3 bg-[#12161c] border-b-2 border-[#4b5563] shrink-0 overflow-x-auto">
         {/* Home */}
         <Link href="/" className="btn btn-sm gap-1.5" title="Home">
           🏠 <span className="hidden sm:inline text-[11px]">Home</span>
         </Link>
 
-        <div className="w-px h-7 bg-[#45475a]/40" />
+        <div className="w-px h-7 bg-[#4b5563]/40" />
 
         {view === 'file-diff' ? (
           <>
             <button onClick={handleBackToFolder} className="btn btn-sm gap-1.5" title="Back to folder comparison">
               📁 Back
             </button>
-            <div className="w-px h-7 bg-[#45475a]/40" />
+            <div className="w-px h-7 bg-[#4b5563]/40" />
 
             {/* Diff navigation */}
             {hasDiffs && (
               <>
-                <div className="flex items-center gap-0.5 bg-[#1a1a2e] p-0.5 rounded-lg border border-[#45475a]/50">
+                <div className="flex items-center gap-0.5 bg-[#252d37] p-0.5 rounded-lg border border-[#4b5563]/50">
                   <button onClick={goFirstDiff} className="btn btn-sm px-2" title="First difference">⏮</button>
                   <button onClick={() => navigateDiff(-1)} className="btn btn-sm px-2" title="Previous difference (F7)">◀</button>
-                  <span className="text-xs text-[#a6adc8] px-2.5 py-1 bg-[#0a0a12] border border-[#45475a]/50 rounded min-w-[60px] text-center tabular-nums select-none font-semibold">
+                  <span className="text-xs text-[#9ca3af] px-2.5 py-1 bg-[#12161c] border border-[#4b5563]/50 rounded min-w-[60px] text-center tabular-nums select-none font-semibold">
                     {currentDiff + 1}/{diffCount}
                   </span>
                   <button onClick={() => navigateDiff(+1)} className="btn btn-sm px-2" title="Next difference (F8)">▶</button>
@@ -247,7 +247,7 @@ export default function FolderComparePage() {
             <button className="btn btn-sm btn-active" title="Show differences">≠ <span className="hidden sm:inline text-[11px]">Diffs</span></button>
             <button className="btn btn-sm" title="Show same">= <span className="hidden sm:inline text-[11px]">Same</span></button>
 
-            <div className="w-px h-7 bg-[#45475a]/40" />
+            <div className="w-px h-7 bg-[#4b5563]/40" />
 
             {/* Actions */}
             <button onClick={handleRefresh} className="btn btn-sm" title="Refresh comparison">🔄 <span className="hidden sm:inline text-[11px]">Refresh</span></button>
@@ -262,9 +262,9 @@ export default function FolderComparePage() {
 
       {/* Filter / Path bar */}
       {view !== 'file-diff' && (
-        <div className="flex items-center gap-2 h-9 px-3 bg-[#13131f] border-b border-[#45475a] shrink-0 text-xs">
-          <span className="text-[#6c7086]">Filters:</span>
-          <span className="px-2 py-0.5 bg-[#0a0a12] border border-[#45475a]/50 rounded text-[#a6adc8] font-mono text-[11px]">*.*</span>
+        <div className="flex items-center gap-2 h-9 px-3 bg-[#1e242c] border-b border-[#4b5563] shrink-0 text-xs">
+          <span className="text-[#6b7280]">Filters:</span>
+          <span className="px-2 py-0.5 bg-[#12161c] border border-[#4b5563]/50 rounded text-[#9ca3af] font-mono text-[11px]">*.*</span>
           <div className="flex-1" />
           <button className="btn btn-sm text-[11px]">🔍 Filters</button>
           <button className="btn btn-sm text-[11px]">👁️ Peek</button>
@@ -272,7 +272,7 @@ export default function FolderComparePage() {
       )}
 
       {/* Panel path bars */}
-      <div className="grid shrink-0 bg-[#0f0f1f] border-b-2 border-[#45475a]"
+      <div className="grid shrink-0 bg-[#181d24] border-b-2 border-[#4b5563]"
            style={{ gridTemplateColumns: '1fr 3px 1fr' }}>
         <PathBar
           path={view === 'file-diff' ? (leftFile?.name ?? '') : (leftDir?.name ?? '')}
@@ -280,7 +280,7 @@ export default function FolderComparePage() {
           fsApiSupported={fsApiSupported}
           isFile={view === 'file-diff'}
         />
-        <div className="bg-[#45475a]/30" />
+        <div className="bg-[#4b5563]/30" />
         <PathBar
           path={view === 'file-diff' ? (rightFile?.name ?? '') : (rightDir?.name ?? '')}
           onOpen={() => openFolder('right')}
@@ -290,12 +290,12 @@ export default function FolderComparePage() {
       </div>
 
       {/* Main content area */}
-      <main className="flex-1 overflow-hidden flex flex-col bg-[#0f0f1f]">
+      <main className="flex-1 overflow-hidden flex flex-col bg-[#181d24]">
         {view === 'empty' && (
-          <div className="flex items-center justify-center h-full text-[#6c7086]">
+          <div className="flex items-center justify-center h-full text-[#6b7280]">
             <div className="text-center">
               <div className="text-5xl mb-4">📁</div>
-              <p className="text-lg font-semibold text-[#a6adc8] mb-2">Folder Compare</p>
+              <p className="text-lg font-semibold text-[#9ca3af] mb-2">Folder Compare</p>
               <p className="text-sm mb-6">Open two folders to compare their contents</p>
               {fsApiSupported ? (
                 <div className="flex gap-3 justify-center">
@@ -332,12 +332,12 @@ export default function FolderComparePage() {
       </main>
 
       {/* Status bar */}
-      <footer className="flex justify-between items-center h-8 px-4 bg-[#0a0a12] border-t-2 border-[#45475a] text-xs text-[#a6adc8] shrink-0 font-medium">
+      <footer className="flex justify-between items-center h-8 px-4 bg-[#12161c] border-t-2 border-[#4b5563] text-xs text-[#9ca3af] shrink-0 font-medium">
         <span className="flex items-center gap-2">
-          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#89b4fa] text-[#0a0a12] text-[9px] font-bold">i</span>
+          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#3b82f6] text-white text-[9px] font-bold">i</span>
           <span>{statusMsg}</span>
         </span>
-        {statusRight && <span className="text-[#6c7086] text-[11px]">{statusRight}</span>}
+        {statusRight && <span className="text-[#6b7280] text-[11px]">{statusRight}</span>}
       </footer>
 
       <Toast toasts={toasts} onRemove={removeToast} />
@@ -347,12 +347,12 @@ export default function FolderComparePage() {
 
 function PathBar({ path, onOpen, fsApiSupported, isFile }: { path: string; onOpen: () => void; fsApiSupported: boolean; isFile?: boolean }) {
   return (
-    <div className="flex items-center gap-2 h-10 px-3 bg-[#1a1a2e] overflow-hidden">
+    <div className="flex items-center gap-2 h-10 px-3 bg-[#252d37] overflow-hidden">
       {!isFile && fsApiSupported && (
         <button onClick={onOpen} className="btn btn-sm shrink-0 text-[11px]">📂</button>
       )}
       <div className="flex items-center gap-2 flex-1 min-w-0">
-        <span className="text-sm truncate text-[#cdd6f4] font-mono" title={path}>
+        <span className="text-sm truncate text-[#e5e7eb] font-mono" title={path}>
           {path || (isFile ? '' : 'No folder selected')}
         </span>
       </div>

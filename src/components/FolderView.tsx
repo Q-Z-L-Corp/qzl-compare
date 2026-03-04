@@ -102,12 +102,12 @@ export default function FolderView({
   }
 
   const SortArrow = ({ col }: { col: SortColumn }) => {
-    if (sortColumn !== col) return <span className="text-[#45475a]/50">↕</span>;
-    return <span className="text-[#89b4fa]">{sortOrder === 'asc' ? '↑' : '↓'}</span>;
+    if (sortColumn !== col) return <span className="text-[#4b5563]/50">↕</span>;
+    return <span className="text-[#cc3333]">{sortOrder === 'asc' ? '↑' : '↓'}</span>;
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-[#1a1a2e]">
+    <div className="flex flex-col h-full overflow-hidden bg-[#252d37]">
 
       {/* Ignored dirs banner */}
       {ignoredDirNames.length > 0 && (
@@ -121,7 +121,7 @@ export default function FolderView({
       )}
 
       {/* Summary + filter toolbar */}
-      <div className="flex flex-col gap-3 px-4 py-3 bg-[#13131f] border-b border-[#45475a] shrink-0">
+      <div className="flex flex-col gap-3 px-4 py-3 bg-[#1e242c] border-b border-[#4b5563] shrink-0">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex gap-1 flex-wrap">
             {FILTER_LABELS.map(f => {
@@ -133,8 +133,8 @@ export default function FolderView({
                   onClick={() => setFilter(f.value)}
                   className={`px-3 py-1.5 text-sm rounded transition-colors ${
                     active
-                      ? 'bg-[#89b4fa] text-[#1e1e2e] font-semibold shadow-md'
-                      : 'bg-[#313244] text-[#a6adc8] hover:bg-[#3d3d56] border border-[#45475a]/50'
+                      ? 'bg-[#cc3333] text-white font-semibold shadow-md'
+                      : 'bg-[#374151] text-[#9ca3af] hover:bg-[#4b5563] border border-[#4b5563]/50'
                   }`}
                   title={`Show ${f.label.toLowerCase()} files (${cnt})`}
                 >
@@ -144,30 +144,30 @@ export default function FolderView({
             })}
           </div>
         </div>
-        <div className="text-xs text-[#6c7086]">
+        <div className="text-xs text-[#6b7280]">
           Showing {sorted.length} of {items.length} files • {counts.different} difference{counts.different !== 1 ? 's' : ''}
         </div>
       </div>
 
       {/* Table header */}
-      <div className="flex items-center px-4 py-2 bg-[#0f0f1f] border-b border-[#45475a] text-xs font-semibold text-[#89b4fa] shrink-0 sticky top-0 z-10">
+      <div className="flex items-center px-4 py-2 bg-[#181d24] border-b border-[#4b5563] text-xs font-semibold text-[#cc3333] shrink-0 sticky top-0 z-10">
         <div className="flex-1 min-w-0">
-          <button onClick={() => handleSortClick('name')} className="flex items-center gap-1 hover:text-[#cdd6f4] transition-colors">
+          <button onClick={() => handleSortClick('name')} className="flex items-center gap-1 hover:text-[#e5e7eb] transition-colors">
             📄 Name <SortArrow col="name" />
           </button>
         </div>
         <div className="w-16 text-right">
-          <button onClick={() => handleSortClick('status')} className="flex items-center justify-end gap-1 ml-auto hover:text-[#cdd6f4] transition-colors">
+          <button onClick={() => handleSortClick('status')} className="flex items-center justify-end gap-1 ml-auto hover:text-[#e5e7eb] transition-colors">
             Status <SortArrow col="status" />
           </button>
         </div>
         <div className="w-20 text-right">
-          <button onClick={() => handleSortClick('leftSize')} className="flex items-center justify-end gap-1 ml-auto hover:text-[#cdd6f4] transition-colors text-[11px]">
+          <button onClick={() => handleSortClick('leftSize')} className="flex items-center justify-end gap-1 ml-auto hover:text-[#e5e7eb] transition-colors text-[11px]">
             Left <SortArrow col="leftSize" />
           </button>
         </div>
         <div className="w-20 text-right">
-          <button onClick={() => handleSortClick('rightSize')} className="flex items-center justify-end gap-1 ml-auto hover:text-[#cdd6f4] transition-colors text-[11px]">
+          <button onClick={() => handleSortClick('rightSize')} className="flex items-center justify-end gap-1 ml-auto hover:text-[#e5e7eb] transition-colors text-[11px]">
             Right <SortArrow col="rightSize" />
           </button>
         </div>
@@ -177,7 +177,7 @@ export default function FolderView({
       {/* Items list */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {sorted.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-[#6c7086]">
+          <div className="flex items-center justify-center h-full text-[#6b7280]">
             <div className="text-center">
               <div className="text-3xl mb-2">📭</div>
               <p>No files to display</p>
@@ -196,11 +196,11 @@ function FolderItemRow({ item, onCompare, onCopyFile }: { item: FolderItem; onCo
   const fileName = item.path.split('/').pop() ?? '';
 
   return (
-    <div className={`flex items-center px-4 py-2 border-b border-[#2a2a3a] transition-colors ${ROW_BG[item.status]}`}>
+    <div className={`flex items-center px-4 py-2 border-b border-[#2f3842] transition-colors ${ROW_BG[item.status]}`}>
       {/* File name */}
       <div className="flex-1 min-w-0 flex items-center gap-2">
         <span className="shrink-0 text-base opacity-90">{getFileIcon(item.path)}</span>
-        <span className="truncate text-sm text-[#cdd6f4] font-medium hover:text-[#89b4fa]" title={item.path}>
+        <span className="truncate text-sm text-[#e5e7eb] font-medium hover:text-[#cc3333]" title={item.path}>
           {fileName}
         </span>
       </div>
@@ -213,12 +213,12 @@ function FolderItemRow({ item, onCompare, onCopyFile }: { item: FolderItem; onCo
       </div>
 
       {/* Left size */}
-      <div className="w-20 text-right text-xs text-[#a6adc8]">
+      <div className="w-20 text-right text-xs text-[#9ca3af]">
         {item.leftSize !== undefined ? formatSize(item.leftSize) : '—'}
       </div>
 
       {/* Right size */}
-      <div className="w-20 text-right text-xs text-[#a6adc8]">
+      <div className="w-20 text-right text-xs text-[#9ca3af]">
         {item.rightSize !== undefined ? formatSize(item.rightSize) : '—'}
       </div>
 
@@ -226,7 +226,7 @@ function FolderItemRow({ item, onCompare, onCopyFile }: { item: FolderItem; onCo
       <div className="w-24 text-right flex items-center justify-end gap-1">
         <button
           onClick={() => onCompare(item.path)}
-          className="px-2 py-1 text-xs bg-[#313244] text-[#89b4fa] hover:bg-[#3d3d56] rounded transition-colors"
+          className="px-2 py-1 text-xs bg-[#374151] text-[#cc3333] hover:bg-[#4b5563] rounded transition-colors"
           title="Compare files"
         >
           🔍
@@ -236,7 +236,7 @@ function FolderItemRow({ item, onCompare, onCopyFile }: { item: FolderItem; onCo
             {item.leftHandle && (
               <button
                 onClick={() => onCopyFile(item.path, 'left', 'right')}
-                className="px-2 py-1 text-xs bg-[#313244] text-[#56d364] hover:bg-[#2a4a2a] rounded transition-colors"
+                className="px-2 py-1 text-xs bg-[#374151] text-[#56d364] hover:bg-[#2a4a2a] rounded transition-colors"
                 title="Copy left → right"
               >
                 ➜
@@ -245,7 +245,7 @@ function FolderItemRow({ item, onCompare, onCopyFile }: { item: FolderItem; onCo
             {item.rightHandle && (
               <button
                 onClick={() => onCopyFile(item.path, 'right', 'left')}
-                className="px-2 py-1 text-xs bg-[#313244] text-[#56d364] hover:bg-[#2a4a2a] rounded transition-colors"
+                className="px-2 py-1 text-xs bg-[#374151] text-[#56d364] hover:bg-[#2a4a2a] rounded transition-colors"
                 title="Copy right ← left"
               >
                 ⬅

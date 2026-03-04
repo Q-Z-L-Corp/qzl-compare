@@ -39,70 +39,70 @@ export default function Toolbar({
   };
 
   return (
-    <header className="flex items-center gap-3 h-12 px-4 bg-[#0a0a12] border-b-2 border-[#45475a] shrink-0 overflow-x-auto">
+    <header className="flex items-center gap-3 h-12 px-4 bg-[#12161c] border-b-2 border-[#4b5563] shrink-0 overflow-x-auto">
       {/* Logo */}
-      <div className="flex items-center gap-2 text-[#89b4fa] font-bold text-sm whitespace-nowrap select-none">
+      <div className="flex items-center gap-2 text-[#cc3333] font-bold text-sm whitespace-nowrap select-none">
         <span className="text-lg">⚖️</span>
         <span className="hidden sm:inline tracking-tight">QZL Compare</span>
       </div>
 
-      <div className="w-px h-7 bg-[#45475a]/50" />
+      <div className="w-px h-7 bg-[#4b5563]/50" />
 
       {/* Back to folder button */}
       {showBackButton ? (
         <>
           <button
             onClick={onBack}
-            className="btn btn-sm bg-[#313244] hover:bg-[#3d3d56] gap-1.5"
+            className="btn btn-sm bg-[#374151] hover:bg-[#4b5563] gap-1.5"
             title="Back to folder comparison"
           >
             📁 Back
           </button>
-          <div className="w-px h-7 bg-[#45475a]/50" />
+          <div className="w-px h-7 bg-[#4b5563]/50" />
         </>
       ) : (
         <>
           {/* Mode toggle */}
-          <div className="flex gap-0.5 bg-[#1a1a2e] p-0.5 rounded-lg border border-[#45475a]/50">
+          <div className="flex gap-0.5 bg-[#252d37] p-0.5 rounded-lg border border-[#4b5563]/50">
             <button
               onClick={() => onSetMode('file')}
-              className={`btn btn-sm px-2.5 transition-all ${mode === 'file' ? 'btn-active shadow-md' : 'bg-transparent text-[#a6adc8] hover:bg-[#2a2a3a] border-0'}`}
+              className={`btn btn-sm px-2.5 transition-all ${mode === 'file' ? 'btn-active shadow-md' : 'bg-transparent text-[#9ca3af] hover:bg-[#2f3842] border-0'}`}
               title="Compare two files"
             >
               📄 Files
             </button>
             <button
               onClick={() => onSetMode('folder')}
-              className={`btn btn-sm px-2.5 transition-all ${mode === 'folder' ? 'btn-active shadow-md' : 'bg-transparent text-[#a6adc8] hover:bg-[#2a2a3a] border-0'}`}
+              className={`btn btn-sm px-2.5 transition-all ${mode === 'folder' ? 'btn-active shadow-md' : 'bg-transparent text-[#9ca3af] hover:bg-[#2f3842] border-0'}`}
               title="Compare two folders"
             >
               📁 Folders
             </button>
             <button
               onClick={() => onSetMode('text')}
-              className={`btn btn-sm px-2.5 transition-all ${mode === 'text' ? 'btn-active shadow-md' : 'bg-transparent text-[#a6adc8] hover:bg-[#2a2a3a] border-0'}`}
+              className={`btn btn-sm px-2.5 transition-all ${mode === 'text' ? 'btn-active shadow-md' : 'bg-transparent text-[#9ca3af] hover:bg-[#2f3842] border-0'}`}
               title="Compare two text snippets"
             >
               📝 Text
             </button>
           </div>
-          <div className="w-px h-7 bg-[#45475a]/50" />
+          <div className="w-px h-7 bg-[#4b5563]/50" />
         </>
       )}
 
       {/* Diff navigation — First / Prev / counter / Next / Last */}
       {hasDiffs && (
         <>
-          <div className="flex items-center gap-0.5 bg-[#1a1a2e] p-0.5 rounded-lg border border-[#45475a]/50">
+          <div className="flex items-center gap-0.5 bg-[#252d37] p-0.5 rounded-lg border border-[#4b5563]/50">
             <button onClick={onFirstDiff} className="btn btn-sm px-2" title="First difference (Ctrl+Home)">⏮</button>
             <button onClick={onPrevDiff}  className="btn btn-sm px-2" title="Previous difference (F7)">◀</button>
-            <span className="text-xs text-[#a6adc8] px-2.5 py-1 bg-[#0a0a12] border border-[#45475a]/50 rounded min-w-[60px] text-center tabular-nums select-none font-semibold">
+            <span className="text-xs text-[#9ca3af] px-2.5 py-1 bg-[#12161c] border border-[#4b5563]/50 rounded min-w-[60px] text-center tabular-nums select-none font-semibold">
               {currentDiff + 1}/{diffCount}
             </span>
             <button onClick={onNextDiff}  className="btn btn-sm px-2" title="Next difference (F8)">▶</button>
             <button onClick={onLastDiff}  className="btn btn-sm px-2" title="Last difference (Ctrl+End)">⏭</button>
           </div>
-          <div className="w-px h-7 bg-[#45475a]/50" />
+          <div className="w-px h-7 bg-[#4b5563]/50" />
         </>
       )}
 
@@ -125,7 +125,7 @@ export default function Toolbar({
               Left 📥
             </button>
           </div>
-          <div className="w-px h-7 bg-[#45475a]/50" />
+          <div className="w-px h-7 bg-[#4b5563]/50" />
         </>
       )}
 
@@ -133,20 +133,20 @@ export default function Toolbar({
       <div className="relative">
         <button
           onClick={() => setShowOptions(!showOptions)}
-          className="btn btn-sm bg-[#313244] hover:bg-[#3d3d56] text-xs"
+          className="btn btn-sm bg-[#374151] hover:bg-[#4b5563] text-xs"
           title="Comparison options"
         >
           ⚙️ Options
         </button>
         {showOptions && (
-          <div className="absolute top-full left-0 mt-1 w-64 bg-[#1a1a2e] border border-[#45475a] rounded-lg shadow-lg z-50 p-3 space-y-3">
+          <div className="absolute top-full left-0 mt-1 w-64 bg-[#252d37] border border-[#4b5563] rounded-lg shadow-lg z-50 p-3 space-y-3">
             {/* Ignore whitespace */}
             <div>
-              <label className="text-xs font-semibold text-[#cdd6f4] block mb-1.5">Ignore Whitespace</label>
+              <label className="text-xs font-semibold text-[#e5e7eb] block mb-1.5">Ignore Whitespace</label>
               <select
                 value={comparisonOptions.ignoreWhitespace}
                 onChange={(e) => updateOption('ignoreWhitespace', e.target.value as any)}
-                className="w-full px-2 py-1 text-xs bg-[#313244] text-[#cdd6f4] border border-[#45475a] rounded hover:border-[#585b70] transition-colors"
+                className="w-full px-2 py-1 text-xs bg-[#374151] text-[#e5e7eb] border border-[#4b5563] rounded hover:border-[#5d6b7a] transition-colors"
               >
                 <option value="none">None</option>
                 <option value="trailing">Trailing spaces</option>
@@ -162,9 +162,9 @@ export default function Toolbar({
                 id="caseSensitive"
                 checked={comparisonOptions.caseSensitive}
                 onChange={(e) => updateOption('caseSensitive', e.target.checked)}
-                className="accent-[#89b4fa]"
+                className="accent-[#cc3333]"
               />
-              <label htmlFor="caseSensitive" className="text-xs text-[#a6adc8] cursor-pointer">
+              <label htmlFor="caseSensitive" className="text-xs text-[#9ca3af] cursor-pointer">
                 Case sensitive
               </label>
             </div>
@@ -176,9 +176,9 @@ export default function Toolbar({
                 id="ignoreLineEndings"
                 checked={comparisonOptions.ignoreLineEndings}
                 onChange={(e) => updateOption('ignoreLineEndings', e.target.checked)}
-                className="accent-[#89b4fa]"
+                className="accent-[#cc3333]"
               />
-              <label htmlFor="ignoreLineEndings" className="text-xs text-[#a6adc8] cursor-pointer">
+              <label htmlFor="ignoreLineEndings" className="text-xs text-[#9ca3af] cursor-pointer">
                 Ignore line endings (CRLF vs LF)
               </label>
             </div>
@@ -190,15 +190,15 @@ export default function Toolbar({
                 id="showLineNumbers"
                 checked={comparisonOptions.showLineNumbers}
                 onChange={(e) => updateOption('showLineNumbers', e.target.checked)}
-                className="accent-[#89b4fa]"
+                className="accent-[#cc3333]"
               />
-              <label htmlFor="showLineNumbers" className="text-xs text-[#a6adc8] cursor-pointer">
+              <label htmlFor="showLineNumbers" className="text-xs text-[#9ca3af] cursor-pointer">
                 Show line numbers
               </label>
             </div>
 
             {/* Help text */}
-            <div className="pt-2 border-t border-[#45475a] text-[11px] text-[#6c7086]">
+            <div className="pt-2 border-t border-[#4b5563] text-[11px] text-[#6b7280]">
               💡 Modify comparison behavior to focus on what matters
             </div>
           </div>

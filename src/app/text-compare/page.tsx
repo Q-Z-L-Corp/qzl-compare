@@ -106,30 +106,30 @@ export default function TextComparePage() {
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       {/* Title bar */}
-      <header className="flex items-center h-10 px-4 bg-[#0a0a12] border-b border-[#45475a] shrink-0">
-        <div className="flex items-center gap-2 text-[#89b4fa] font-bold text-sm select-none">
+      <header className="flex items-center h-10 px-4 bg-[#12161c] border-b border-[#4b5563] shrink-0">
+        <div className="flex items-center gap-2 text-[#cc3333] font-bold text-sm select-none">
           <span className="text-lg">⚖️</span>
           <span className="tracking-tight">Text Compare - QZL Compare</span>
         </div>
       </header>
 
       {/* Menu bar */}
-      <div className="flex items-center h-8 px-4 bg-[#13131f] border-b border-[#45475a]/50 text-[13px] text-[#a6adc8] shrink-0 gap-4 select-none">
-        <span className="hover:text-[#cdd6f4] cursor-pointer">Session</span>
-        <span className="hover:text-[#cdd6f4] cursor-pointer">Edit</span>
-        <span className="hover:text-[#cdd6f4] cursor-pointer">View</span>
-        <span className="hover:text-[#cdd6f4] cursor-pointer">Tools</span>
-        <span className="hover:text-[#cdd6f4] cursor-pointer">Help</span>
+      <div className="flex items-center h-8 px-4 bg-[#1e242c] border-b border-[#4b5563]/50 text-[13px] text-[#9ca3af] shrink-0 gap-4 select-none">
+        <span className="hover:text-[#e5e7eb] cursor-pointer">Session</span>
+        <span className="hover:text-[#e5e7eb] cursor-pointer">Edit</span>
+        <span className="hover:text-[#e5e7eb] cursor-pointer">View</span>
+        <span className="hover:text-[#e5e7eb] cursor-pointer">Tools</span>
+        <span className="hover:text-[#e5e7eb] cursor-pointer">Help</span>
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center gap-1 h-11 px-3 bg-[#0a0a12] border-b-2 border-[#45475a] shrink-0 overflow-x-auto">
+      <div className="flex items-center gap-1 h-11 px-3 bg-[#12161c] border-b-2 border-[#4b5563] shrink-0 overflow-x-auto">
         {/* Home */}
         <Link href="/" className="btn btn-sm gap-1.5" title="Home">
           🏠 <span className="hidden sm:inline text-[11px]">Home</span>
         </Link>
 
-        <div className="w-px h-7 bg-[#45475a]/40" />
+        <div className="w-px h-7 bg-[#4b5563]/40" />
 
         {/* Toggle editors/diff */}
         <button
@@ -140,7 +140,7 @@ export default function TextComparePage() {
           ✏️ <span className="hidden sm:inline text-[11px]">Edit</span>
         </button>
 
-        <div className="w-px h-7 bg-[#45475a]/40" />
+        <div className="w-px h-7 bg-[#4b5563]/40" />
 
         {/* Clear */}
         <button
@@ -157,44 +157,44 @@ export default function TextComparePage() {
         <div className="flex-1" />
 
         {/* Stats */}
-        <span className="text-xs text-[#6c7086] mr-2">
+        <span className="text-xs text-[#6b7280] mr-2">
           📊 {diffCount} difference{diffCount !== 1 ? 's' : ''} • {leftLines}/{rightLines} lines
         </span>
       </div>
 
       {/* Path bars */}
-      <div className="grid shrink-0 bg-[#0f0f1f] border-b-2 border-[#45475a]"
+      <div className="grid shrink-0 bg-[#181d24] border-b-2 border-[#4b5563]"
            style={{ gridTemplateColumns: '1fr 3px 1fr' }}>
         <TextPathBar side="left" onLoad={() => loadTextFromFile('left')} onSave={() => saveTextToFile('left')} fsApiSupported={fsApiSupported} hasContent={leftText.length > 0} />
-        <div className="bg-[#45475a]/30" />
+        <div className="bg-[#4b5563]/30" />
         <TextPathBar side="right" onLoad={() => loadTextFromFile('right')} onSave={() => saveTextToFile('right')} fsApiSupported={fsApiSupported} hasContent={rightText.length > 0} />
       </div>
 
       {/* Main content */}
-      <main className="flex-1 overflow-hidden flex flex-col bg-[#0f0f1f]">
+      <main className="flex-1 overflow-hidden flex flex-col bg-[#181d24]">
         {showEditors ? (
           /* Editor mode: two text areas side by side, with diff below */
           <div className="flex flex-col h-full">
             {/* Editors */}
-            <div className="grid border-b-2 border-[#45475a]"
+            <div className="grid border-b-2 border-[#4b5563]"
                  style={{ gridTemplateColumns: '1fr 3px 1fr', height: hasDiffContent ? '40%' : '100%' }}>
               <textarea
                 value={leftText}
                 onChange={e => handleTextChange('left', e.target.value)}
-                className="w-full h-full bg-[#13131f] text-[#cdd6f4] p-4 resize-none outline-none
-                           font-mono text-[13px] leading-6 placeholder:text-[#45475a]
-                           focus:ring-inset focus:ring-1 focus:ring-[#89b4fa]/50"
+                className="w-full h-full bg-[#1e242c] text-[#e5e7eb] p-4 resize-none outline-none
+                           font-mono text-[13px] leading-6 placeholder:text-[#4b5563]
+                           focus:ring-inset focus:ring-1 focus:ring-[#cc3333]/50"
                 style={{ tabSize: 4 }}
                 placeholder="Paste or type left text here…"
                 spellCheck={false}
               />
-              <div className="bg-[#45475a]/30" />
+              <div className="bg-[#4b5563]/30" />
               <textarea
                 value={rightText}
                 onChange={e => handleTextChange('right', e.target.value)}
-                className="w-full h-full bg-[#13131f] text-[#cdd6f4] p-4 resize-none outline-none
-                           font-mono text-[13px] leading-6 placeholder:text-[#45475a]
-                           focus:ring-inset focus:ring-1 focus:ring-[#89b4fa]/50"
+                className="w-full h-full bg-[#1e242c] text-[#e5e7eb] p-4 resize-none outline-none
+                           font-mono text-[13px] leading-6 placeholder:text-[#4b5563]
+                           focus:ring-inset focus:ring-1 focus:ring-[#cc3333]/50"
                 style={{ tabSize: 4 }}
                 placeholder="Paste or type right text here…"
                 spellCheck={false}
@@ -221,10 +221,10 @@ export default function TextComparePage() {
               onRightChange={text => handleTextChange('right', text)}
             />
           ) : (
-            <div className="flex items-center justify-center h-full text-[#6c7086]">
+            <div className="flex items-center justify-center h-full text-[#6b7280]">
               <div className="text-center">
                 <div className="text-5xl mb-4">📝</div>
-                <p className="text-lg font-semibold text-[#a6adc8] mb-2">Text Compare</p>
+                <p className="text-lg font-semibold text-[#9ca3af] mb-2">Text Compare</p>
                 <p className="text-sm">Click the Edit button in the toolbar to start typing</p>
               </div>
             </div>
@@ -233,12 +233,12 @@ export default function TextComparePage() {
       </main>
 
       {/* Status bar */}
-      <footer className="flex justify-between items-center h-8 px-4 bg-[#0a0a12] border-t-2 border-[#45475a] text-xs text-[#a6adc8] shrink-0 font-medium">
+      <footer className="flex justify-between items-center h-8 px-4 bg-[#12161c] border-t-2 border-[#4b5563] text-xs text-[#9ca3af] shrink-0 font-medium">
         <span className="flex items-center gap-2">
-          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#89b4fa] text-[#0a0a12] text-[9px] font-bold">i</span>
+          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#3b82f6] text-white text-[9px] font-bold">i</span>
           <span>{statusMsg}</span>
         </span>
-        {statusRight && <span className="text-[#6c7086] text-[11px]">{statusRight}</span>}
+        {statusRight && <span className="text-[#6b7280] text-[11px]">{statusRight}</span>}
       </footer>
 
       <Toast toasts={toasts} onRemove={removeToast} />
@@ -255,8 +255,8 @@ function TextPathBar({ side, onLoad, onSave, fsApiSupported, hasContent }: {
 }) {
   const label = side === 'left' ? 'Left' : 'Right';
   return (
-    <div className="flex items-center gap-2 h-10 px-3 bg-[#1a1a2e] overflow-hidden">
-      <span className="text-xs font-bold text-[#89b4fa] uppercase tracking-wider select-none whitespace-nowrap">{label} Text</span>
+    <div className="flex items-center gap-2 h-10 px-3 bg-[#252d37] overflow-hidden">
+      <span className="text-xs font-bold text-[#cc3333] uppercase tracking-wider select-none whitespace-nowrap">{label} Text</span>
       <div className="flex-1" />
       {fsApiSupported && (
         <div className="flex gap-1">
