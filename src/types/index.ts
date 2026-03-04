@@ -53,3 +53,12 @@ export interface ToastMessage {
   message: string;
   type: 'success' | 'error' | 'info';
 }
+
+// ── Comparison options ─────────────────────────────────────────────────────
+
+export interface ComparisonOptions {
+  ignoreWhitespace: 'none' | 'all' | 'trailing' | 'changes';
+  caseSensitive: boolean;
+  ignoreLineEndings: boolean;
+  showLineNumbers: boolean;
+}
