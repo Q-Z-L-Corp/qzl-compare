@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { AppMode, FileInfo, DirInfo, DiffOp, FolderItem, ToastMessage } from '@/types';
+import type { AppMode, FileInfo, DirInfo, DiffOp, FolderItem, ToastMessage, ComparisonOptions } from '@/types';
 import { computeLineDiff } from '@/lib/diff';
 import { countLines, formatSize } from '@/lib/formatters';
 import { buildFolderItems } from '@/lib/fsUtils';
@@ -48,6 +48,12 @@ export default function CompareApp() {
   const [statusRight,      setStatusRight]      = useState('');
   const [toasts,           setToasts]           = useState<ToastMessage[]>([]);
   const [fromFolderView,   setFromFolderView]   = useState(false);
+  const [comparisonOptions, setComparisonOptions] = useState<ComparisonOptions>({
+    ignoreWhitespace: 'none',
+    caseSensitive: true,
+    ignoreLineEndings: false,
+    showLineNumbers: true,
+  });
 
   const [fsApiSupported, setFsApiSupported] = useState(false);
   useEffect(() => {
@@ -97,10 +103,15 @@ export default function CompareApp() {
       if (e.key === 'F8')                              { e.preventDefault(); navigateDiff(+1); }
       if (e.key === 'Home' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); goFirstDiff(); }
       if (e.key === 'End'  && (e.ctrlKey || e.metaKey)) { e.preventDefault(); goLastDiff(); }
+      // Copy file shortcuts
+      if ((e.ctrlKey || e.metaKey) && e.key === 'l' && mode === 'file' && leftFile && rightFile && !fromFolderView) { e.preventDefault(); copyFile('left', 'right'); }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'r' && mode === 'file' && leftFile && rightFile && !fromFolderView) { e.preventDefault(); copyFile('right', 'left'); }
+      // Quick navigation
+      if (e.key === 'Escape') { e.preventDefault(); setFromFolderView(false); setMode('file'); setView('welcome'); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [navigateDiff, goFirstDiff, goLastDiff]);
+  }, [navigateDiff, goFirstDiff, goLastDiff, copyFile, mode, leftFile, rightFile, fromFolderView]);
 
   // ── Open file ─────────────────────────────────────────────────────────────
   async function openFile(side: 'left' | 'right') {
@@ -405,6 +416,8 @@ export default function CompareApp() {
         showSyncButtons={showSync}
         showBackButton={fromFolderView}
         onBack={handleBackToFolder}
+        comparisonOptions={comparisonOptions}
+        onComparisonOptionsChange={setComparisonOptions}
       />
 
       {/* PanelBar: hidden in text mode (TextCompareView has its own headers) */}

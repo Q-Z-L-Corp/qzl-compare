@@ -1,6 +1,7 @@
 'use client';
 
-import type { AppMode } from '@/types';
+import { useState } from 'react';
+import type { AppMode, ComparisonOptions } from '@/types';
 
 interface ToolbarProps {
   mode: AppMode;
@@ -16,6 +17,8 @@ interface ToolbarProps {
   showSyncButtons: boolean;
   showBackButton: boolean;
   onBack: () => void;
+  comparisonOptions: ComparisonOptions;
+  onComparisonOptionsChange: (opts: ComparisonOptions) => void;
 }
 
 export default function Toolbar({
@@ -25,8 +28,15 @@ export default function Toolbar({
   onCopyToRight, onCopyToLeft,
   showSyncButtons,
   showBackButton, onBack,
+  comparisonOptions,
+  onComparisonOptionsChange,
 }: ToolbarProps) {
+  const [showOptions, setShowOptions] = useState(false);
   const hasDiffs = diffCount > 0;
+
+  const updateOption = <K extends keyof ComparisonOptions>(key: K, value: ComparisonOptions[K]) => {
+    onComparisonOptionsChange({ ...comparisonOptions, [key]: value });
+  };
 
   return (
     <header className="flex items-center gap-3 h-12 px-4 bg-[#0a0a12] border-b-2 border-[#45475a] shrink-0 overflow-x-auto">
@@ -98,23 +108,102 @@ export default function Toolbar({
 
       {/* Sync buttons */}
       {showSyncButtons && hasDiffs && (
-        <div className="flex gap-1">
-          <button
-            onClick={onCopyToRight}
-            className="btn btn-sm text-sm bg-[#1e3a1e] text-[#56d364] border-[#2ea043] hover:bg-[#1a4a1a] hover:border-[#2ea043] transition-colors"
-            title="Overwrite right file with left"
-          >
-            📤 Right
-          </button>
-          <button
-            onClick={onCopyToLeft}
-            className="btn btn-sm text-sm bg-[#1e3a1e] text-[#56d364] border-[#2ea043] hover:bg-[#1a4a1a] hover:border-[#2ea043] transition-colors"
-            title="Overwrite left file with right"
-          >
-            Left 📥
-          </button>
-        </div>
+        <>
+          <div className="flex gap-1">
+            <button
+              onClick={onCopyToRight}
+              className="btn btn-sm text-sm bg-[#1e3a1e] text-[#56d364] border-[#2ea043] hover:bg-[#1a4a1a] hover:border-[#2ea043] transition-colors"
+              title="Overwrite right file with left"
+            >
+              📤 Right
+            </button>
+            <button
+              onClick={onCopyToLeft}
+              className="btn btn-sm text-sm bg-[#1e3a1e] text-[#56d364] border-[#2ea043] hover:bg-[#1a4a1a] hover:border-[#2ea043] transition-colors"
+              title="Overwrite left file with right"
+            >
+              Left 📥
+            </button>
+          </div>
+          <div className="w-px h-7 bg-[#45475a]/50" />
+        </>
       )}
+
+      {/* Comparison options menu */}
+      <div className="relative">
+        <button
+          onClick={() => setShowOptions(!showOptions)}
+          className="btn btn-sm bg-[#313244] hover:bg-[#3d3d56] text-xs"
+          title="Comparison options"
+        >
+          ⚙️ Options
+        </button>
+        {showOptions && (
+          <div className="absolute top-full left-0 mt-1 w-64 bg-[#1a1a2e] border border-[#45475a] rounded-lg shadow-lg z-50 p-3 space-y-3">
+            {/* Ignore whitespace */}
+            <div>
+              <label className="text-xs font-semibold text-[#cdd6f4] block mb-1.5">Ignore Whitespace</label>
+              <select
+                value={comparisonOptions.ignoreWhitespace}
+                onChange={(e) => updateOption('ignoreWhitespace', e.target.value as any)}
+                className="w-full px-2 py-1 text-xs bg-[#313244] text-[#cdd6f4] border border-[#45475a] rounded hover:border-[#585b70] transition-colors"
+              >
+                <option value="none">None</option>
+                <option value="trailing">Trailing spaces</option>
+                <option value="all">All whitespace</option>
+                <option value="changes">In changes only</option>
+              </select>
+            </div>
+
+            {/* Case sensitive */}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="caseSensitive"
+                checked={comparisonOptions.caseSensitive}
+                onChange={(e) => updateOption('caseSensitive', e.target.checked)}
+                className="accent-[#89b4fa]"
+              />
+              <label htmlFor="caseSensitive" className="text-xs text-[#a6adc8] cursor-pointer">
+                Case sensitive
+              </label>
+            </div>
+
+            {/* Ignore line endings */}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="ignoreLineEndings"
+                checked={comparisonOptions.ignoreLineEndings}
+                onChange={(e) => updateOption('ignoreLineEndings', e.target.checked)}
+                className="accent-[#89b4fa]"
+              />
+              <label htmlFor="ignoreLineEndings" className="text-xs text-[#a6adc8] cursor-pointer">
+                Ignore line endings (CRLF vs LF)
+              </label>
+            </div>
+
+            {/* Show line numbers */}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="showLineNumbers"
+                checked={comparisonOptions.showLineNumbers}
+                onChange={(e) => updateOption('showLineNumbers', e.target.checked)}
+                className="accent-[#89b4fa]"
+              />
+              <label htmlFor="showLineNumbers" className="text-xs text-[#a6adc8] cursor-pointer">
+                Show line numbers
+              </label>
+            </div>
+
+            {/* Help text */}
+            <div className="pt-2 border-t border-[#45475a] text-[11px] text-[#6c7086]">
+              💡 Modify comparison behavior to focus on what matters
+            </div>
+          </div>
+        )}
+      </div>
     </header>
   );
 }
