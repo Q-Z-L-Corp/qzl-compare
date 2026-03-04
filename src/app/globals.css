@@ -94,6 +94,56 @@
   @apply px-2.5 py-0.5 text-xs font-medium;
 }
 
+/* ── Text diff grid (left | gutter | right) ── */
+.text-diff-row {
+  display: grid;
+  grid-template-columns: 1fr 32px 1fr;
+  border-bottom: 1px solid rgba(69,71,90,0.15);
+}
+/* Remove the default left-side right-border; gutter provides the separation */
+.text-diff-row .diff-cell.left { border-right: none; }
+
+.text-diff-gutter-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 1px 0;
+  background: #0a0a12;
+  border-left: 1px solid rgba(69,71,90,0.25);
+  border-right: 1px solid rgba(69,71,90,0.25);
+}
+
+.text-diff-copy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 13px;
+  font-size: 10px;
+  font-weight: bold;
+  color: #585b70;
+  background: transparent;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.1s ease;
+  line-height: 1;
+  padding: 0;
+  user-select: none;
+}
+.text-diff-copy-btn:hover { background: rgba(137,180,250,0.18); color: #89b4fa; }
+
+.text-diff-collapser {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(69,71,90,0.2);
+}
+
 /* ── Equal section collapser ── */
 .diff-collapser { border-bottom: 1px solid rgba(69,71,90,0.2); }
 .diff-collapser-inner {
