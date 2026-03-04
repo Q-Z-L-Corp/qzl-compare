@@ -100,10 +100,95 @@ function mergeReplace(ops: DiffOp[]): DiffOp[] {
   return result;
 }
 
-export function computeLineDiff(leftText: string, rightText: string): DiffOp[] {
-  const left  = splitLines(leftText  ?? '');
-  const right = splitLines(rightText ?? '');
-  return mergeReplace(lcsLineDiff(left, right));
+export function computeLineDiff(
+  leftText: string,
+  rightText: string,
+  options?: { ignoreWhitespace?: string; caseSensitive?: boolean; ignoreLineEndings?: boolean },
+): DiffOp[] {
+  let leftStr  = leftText  ?? '';
+  let rightStr = rightText ?? '';
+
+  // Normalize line endings if requested
+  if (options?.ignoreLineEndings) {
+    leftStr  = leftStr.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    rightStr = rightStr.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  }
+
+  const leftRaw  = splitLines(leftStr);
+  const rightRaw = splitLines(rightStr);
+
+  // Build comparison copies with transformations applied
+  const normalize = (line: string): string => {
+    let s = line;
+    if (options?.ignoreWhitespace === 'all') s = s.replace(/\s+/g, '');
+    else if (options?.ignoreWhitespace === 'trailing') s = s.replace(/\s+$/, '');
+    else if (options?.ignoreWhitespace === 'changes') s = s.replace(/\s+/g, ' ').trim();
+    if (options?.caseSensitive === false) s = s.toLowerCase();
+    return s;
+  };
+
+  const leftNorm  = leftRaw.map(normalize);
+  const rightNorm = rightRaw.map(normalize);
+
+  // Run LCS on normalized copies, but report original lines
+  const ops = lcsLineDiffNormalized(leftRaw, rightRaw, leftNorm, rightNorm);
+  return mergeReplace(ops);
+}
+
+function lcsLineDiffNormalized(
+  leftRaw: string[], rightRaw: string[],
+  leftNorm: string[], rightNorm: string[],
+): DiffOp[] {
+  const m = leftNorm.length;
+  const n = rightNorm.length;
+
+  if (m > MAX_LCS_LINES || n > MAX_LCS_LINES) {
+    // Fallback: positional diff on normalized, reporting raw lines
+    const ops: DiffOp[] = [];
+    const len = Math.max(m, n);
+    for (let i = 0; i < len; i++) {
+      if (i < m && i < n) {
+        if (leftNorm[i] === rightNorm[i]) {
+          ops.push({ type: 'equal', leftLine: leftRaw[i], rightLine: rightRaw[i], leftNum: i + 1, rightNum: i + 1 });
+        } else {
+          ops.push({ type: 'delete', leftLine: leftRaw[i], leftNum: i + 1 });
+          ops.push({ type: 'insert', rightLine: rightRaw[i], rightNum: i + 1 });
+        }
+      } else if (i < m) {
+        ops.push({ type: 'delete', leftLine: leftRaw[i], leftNum: i + 1 });
+      } else {
+        ops.push({ type: 'insert', rightLine: rightRaw[i], rightNum: i + 1 });
+      }
+    }
+    return ops;
+  }
+
+  const dp: Uint32Array[] = [];
+  for (let i = 0; i <= m; i++) dp.push(new Uint32Array(n + 1));
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = (leftNorm[i - 1] === rightNorm[j - 1])
+        ? dp[i - 1][j - 1] + 1
+        : (dp[i - 1][j] >= dp[i][j - 1] ? dp[i - 1][j] : dp[i][j - 1]);
+    }
+  }
+
+  const ops: DiffOp[] = [];
+  let i = m, j = n;
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && leftNorm[i - 1] === rightNorm[j - 1]) {
+      ops.push({ type: 'equal', leftLine: leftRaw[i - 1], rightLine: rightRaw[j - 1], leftNum: i, rightNum: j });
+      i--; j--;
+    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+      ops.push({ type: 'insert', rightLine: rightRaw[j - 1], rightNum: j });
+      j--;
+    } else {
+      ops.push({ type: 'delete', leftLine: leftRaw[i - 1], leftNum: i });
+      i--;
+    }
+  }
+  return ops.reverse();
 }
 
 // ── Inline (character-level) diff ─────────────────────────────────────────
