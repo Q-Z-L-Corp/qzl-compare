@@ -357,8 +357,8 @@ export default function FolderComparePage() {
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       {/* Title bar */}
-      <header className="flex items-center h-10 px-4 bg-[#0a0a12] border-b border-[#45475a] shrink-0">
-        <div className="flex items-center gap-2 text-[#89b4fa] font-bold text-sm select-none">
+      <header className="flex items-center h-10 px-4 bg-[#12161c] border-b border-[#4b5563] shrink-0">
+        <div className="flex items-center gap-2 text-[#cc3333] font-bold text-sm select-none">
           <span className="text-lg">⚖️</span>
           <span className="tracking-tight">
             {view === 'file-diff' && leftFile
@@ -373,28 +373,32 @@ export default function FolderComparePage() {
       <MenuBar menus={menus} />
 
       {/* Toolbar */}
-      <div className="flex items-center gap-1 h-11 px-3 bg-[#0a0a12] border-b-2 border-[#45475a] shrink-0 overflow-x-auto">
+      <div className="flex items-center gap-1 h-11 px-3 bg-[#12161c] border-b-2 border-[#4b5563] shrink-0 overflow-x-auto">
         <button onClick={() => router.push('/')} className="btn btn-sm gap-1.5" title="Home">
           🏠 <span className="hidden sm:inline text-[11px]">Home</span>
         </button>
-        <div className="w-px h-7 bg-[#45475a]/40" />
+        <div className="w-px h-7 bg-[#4b5563]/40" />
 
         {view === 'file-diff' ? (
           <>
             <button onClick={handleBackToFolder} className="btn btn-sm gap-1.5" title="Back to folder comparison">
               📁 Back
             </button>
-            <div className="w-px h-7 bg-[#45475a]/40" />
+            <div className="w-px h-7 bg-[#4b5563]/40" />
+
+            {/* Diff navigation */}
             {hasDiffs && (
-              <div className="flex items-center gap-0.5 bg-[#1a1a2e] p-0.5 rounded-lg border border-[#45475a]/50">
-                <button onClick={goFirstDiff} className="btn btn-sm px-2" title="First difference">⏮</button>
-                <button onClick={() => navigateDiff(-1)} className="btn btn-sm px-2" title="Previous difference (F7)">◀</button>
-                <span className="text-xs text-[#a6adc8] px-2.5 py-1 bg-[#0a0a12] border border-[#45475a]/50 rounded min-w-[60px] text-center tabular-nums select-none font-semibold">
-                  {currentDiff + 1}/{diffCount}
-                </span>
-                <button onClick={() => navigateDiff(+1)} className="btn btn-sm px-2" title="Next difference (F8)">▶</button>
-                <button onClick={goLastDiff} className="btn btn-sm px-2" title="Last difference">⏭</button>
-              </div>
+              <>
+                <div className="flex items-center gap-0.5 bg-[#252d37] p-0.5 rounded-lg border border-[#4b5563]/50">
+                  <button onClick={goFirstDiff} className="btn btn-sm px-2" title="First difference">⏮</button>
+                  <button onClick={() => navigateDiff(-1)} className="btn btn-sm px-2" title="Previous difference (F7)">◀</button>
+                  <span className="text-xs text-[#9ca3af] px-2.5 py-1 bg-[#12161c] border border-[#4b5563]/50 rounded min-w-[60px] text-center tabular-nums select-none font-semibold">
+                    {currentDiff + 1}/{diffCount}
+                  </span>
+                  <button onClick={() => navigateDiff(+1)} className="btn btn-sm px-2" title="Next difference (F8)">▶</button>
+                  <button onClick={goLastDiff} className="btn btn-sm px-2" title="Last difference">⏭</button>
+                </div>
+              </>
             )}
           </>
         ) : (
@@ -409,7 +413,7 @@ export default function FolderComparePage() {
             <button onClick={() => setFilterStatusFilter('same')} className={`btn btn-sm ${filterStatusFilter === 'same' ? 'btn-active' : ''}`} title="Show same">
               = <span className="hidden sm:inline text-[11px]">Same</span>
             </button>
-            <div className="w-px h-7 bg-[#45475a]/40" />
+            <div className="w-px h-7 bg-[#4b5563]/40" />
 
             {/* Actions */}
             <button onClick={handleExpandAllToggle} className={`btn btn-sm ${expandAll ? 'btn-active' : ''}`} title={expandAll ? 'Collapse all folders' : 'Expand all folders'} disabled={treeNodes.length === 0}>
@@ -428,7 +432,7 @@ export default function FolderComparePage() {
         )}
         <div className="flex-1" />
         {view === 'folder' && (
-          <span className="text-xs text-[#6c7086]">
+          <span className="text-xs text-[#6b7280]">
             {treeStats.total} files • {treeStats.different} diffs • {treeStats.leftOnly} left • {treeStats.rightOnly} right
           </span>
         )}
@@ -436,16 +440,16 @@ export default function FolderComparePage() {
 
       {/* Active filter banner */}
       {(filterConfig.includePatterns || filterConfig.excludePatterns) && view === 'folder' && (
-        <div className="flex items-center gap-2 px-4 py-1.5 bg-[#1a2a3a] border-b border-[#89b4fa]/30 text-xs text-[#89b4fa] shrink-0">
+        <div className="flex items-center gap-2 px-4 py-1.5 bg-[#1e242c] border-b border-[#3b82f6]/30 text-xs text-[#3b82f6] shrink-0">
           <span>🔍 Filters active:</span>
-          {filterConfig.includePatterns && <span className="font-mono bg-[#0a0a12] px-1.5 py-0.5 rounded">include: {filterConfig.includePatterns}</span>}
-          {filterConfig.excludePatterns && <span className="font-mono bg-[#0a0a12] px-1.5 py-0.5 rounded">exclude: {filterConfig.excludePatterns}</span>}
+          {filterConfig.includePatterns && <span className="font-mono bg-[#12161c] px-1.5 py-0.5 rounded">include: {filterConfig.includePatterns}</span>}
+          {filterConfig.excludePatterns && <span className="font-mono bg-[#12161c] px-1.5 py-0.5 rounded">exclude: {filterConfig.excludePatterns}</span>}
           <button onClick={() => applyFilters({ includePatterns: '', excludePatterns: '' })} className="ml-auto text-[#f85149] hover:text-[#ff6b6b]">✕ Clear</button>
         </div>
       )}
 
       {/* Panel path bars */}
-      <div className="grid shrink-0 bg-[#0f0f1f] border-b-2 border-[#45475a]"
+      <div className="grid shrink-0 bg-[#181d24] border-b-2 border-[#4b5563]"
            style={{ gridTemplateColumns: '1fr 3px 1fr' }}>
         <PathBar
           path={view === 'file-diff' ? (leftFile?.name ?? '') : (leftDir?.name ?? '')}
@@ -453,7 +457,7 @@ export default function FolderComparePage() {
           fsApiSupported={fsApiSupported}
           isFile={view === 'file-diff'}
         />
-        <div className="bg-[#45475a]/30" />
+        <div className="bg-[#4b5563]/30" />
         <PathBar
           path={view === 'file-diff' ? (rightFile?.name ?? '') : (rightDir?.name ?? '')}
           onOpen={() => openFolder('right')}
@@ -463,12 +467,12 @@ export default function FolderComparePage() {
       </div>
 
       {/* Main content area */}
-      <main className="flex-1 overflow-hidden flex flex-col bg-[#0f0f1f]">
+      <main className="flex-1 overflow-hidden flex flex-col bg-[#181d24]">
         {view === 'empty' && (
-          <div className="flex items-center justify-center h-full text-[#6c7086]">
+          <div className="flex items-center justify-center h-full text-[#6b7280]">
             <div className="text-center">
               <div className="text-5xl mb-4">📁</div>
-              <p className="text-lg font-semibold text-[#a6adc8] mb-2">Folder Compare</p>
+              <p className="text-lg font-semibold text-[#9ca3af] mb-2">Folder Compare</p>
               <p className="text-sm mb-6">Open two folders to compare their contents</p>
               {fsApiSupported ? (
                 <div className="flex gap-3 justify-center">
@@ -505,12 +509,12 @@ export default function FolderComparePage() {
       </main>
 
       {/* Status bar */}
-      <footer className="flex justify-between items-center h-8 px-4 bg-[#0a0a12] border-t-2 border-[#45475a] text-xs text-[#a6adc8] shrink-0 font-medium">
+      <footer className="flex justify-between items-center h-8 px-4 bg-[#12161c] border-t-2 border-[#4b5563] text-xs text-[#9ca3af] shrink-0 font-medium">
         <span className="flex items-center gap-2">
-          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#89b4fa] text-[#0a0a12] text-[9px] font-bold">i</span>
+          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#3b82f6] text-white text-[9px] font-bold">i</span>
           <span>{statusMsg}</span>
         </span>
-        {statusRight && <span className="text-[#6c7086] text-[11px]">{statusRight}</span>}
+        {statusRight && <span className="text-[#6b7280] text-[11px]">{statusRight}</span>}
       </footer>
 
       <Toast toasts={toasts} onRemove={removeToast} />
@@ -527,11 +531,11 @@ export default function FolderComparePage() {
       {/* About dialog */}
       {showAbout && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60" onClick={() => setShowAbout(false)}>
-          <div className="bg-[#1a1a2e] border border-[#45475a] rounded-xl shadow-2xl p-6 max-w-sm text-center" onClick={e => e.stopPropagation()}>
+          <div className="bg-[#252d37] border border-[#4b5563] rounded-xl shadow-2xl p-6 max-w-sm text-center" onClick={e => e.stopPropagation()}>
             <div className="text-5xl mb-3">⚖️</div>
-            <h2 className="text-xl font-bold text-[#cdd6f4] mb-1">QZL Compare</h2>
-            <p className="text-sm text-[#a6adc8] mb-2">Version 0.1.0</p>
-            <p className="text-xs text-[#6c7086] mb-4">Free browser-based file & folder comparison tool.<br/>All processing happens locally.</p>
+            <h2 className="text-xl font-bold text-[#e5e7eb] mb-1">QZL Compare</h2>
+            <p className="text-sm text-[#9ca3af] mb-2">Version 0.1.0</p>
+            <p className="text-xs text-[#6b7280] mb-4">Free browser-based file & folder comparison tool.<br/>All processing happens locally.</p>
             <button onClick={() => setShowAbout(false)} className="btn">Close</button>
           </div>
         </div>
@@ -552,37 +556,37 @@ function FilterDialog({ config, onApply, onClose }: {
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60" onClick={onClose}>
-      <div className="bg-[#1a1a2e] border border-[#45475a] rounded-xl shadow-2xl p-6 w-[420px]" onClick={e => e.stopPropagation()}>
-        <h2 className="text-lg font-bold text-[#cdd6f4] mb-4">🔍 File Filters</h2>
+      <div className="bg-[#252d37] border border-[#4b5563] rounded-xl shadow-2xl p-6 w-[420px]" onClick={e => e.stopPropagation()}>
+        <h2 className="text-lg font-bold text-[#e5e7eb] mb-4">🔍 File Filters</h2>
 
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-semibold text-[#cdd6f4] block mb-1.5">Include Patterns</label>
+            <label className="text-xs font-semibold text-[#e5e7eb] block mb-1.5">Include Patterns</label>
             <input
               type="text"
               value={include}
               onChange={e => setInclude(e.target.value)}
               placeholder="e.g., *.ts, *.tsx, *.js"
-              className="w-full px-3 py-2 text-sm bg-[#0a0a12] text-[#cdd6f4] border border-[#45475a] rounded-lg outline-none focus:border-[#89b4fa] font-mono"
+              className="w-full px-3 py-2 text-sm bg-[#12161c] text-[#e5e7eb] border border-[#4b5563] rounded-lg outline-none focus:border-[#cc3333] font-mono"
             />
-            <p className="text-[11px] text-[#6c7086] mt-1">Comma-separated. Only files matching these patterns will be shown. Leave empty to include all.</p>
+            <p className="text-[11px] text-[#6b7280] mt-1">Comma-separated. Only files matching these patterns will be shown. Leave empty to include all.</p>
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-[#cdd6f4] block mb-1.5">Exclude Patterns</label>
+            <label className="text-xs font-semibold text-[#e5e7eb] block mb-1.5">Exclude Patterns</label>
             <input
               type="text"
               value={exclude}
               onChange={e => setExclude(e.target.value)}
               placeholder="e.g., *.log, *.tmp, *.map"
-              className="w-full px-3 py-2 text-sm bg-[#0a0a12] text-[#cdd6f4] border border-[#45475a] rounded-lg outline-none focus:border-[#89b4fa] font-mono"
+              className="w-full px-3 py-2 text-sm bg-[#12161c] text-[#e5e7eb] border border-[#4b5563] rounded-lg outline-none focus:border-[#cc3333] font-mono"
             />
-            <p className="text-[11px] text-[#6c7086] mt-1">Comma-separated. Files matching these patterns will be hidden.</p>
+            <p className="text-[11px] text-[#6b7280] mt-1">Comma-separated. Files matching these patterns will be hidden.</p>
           </div>
 
-          <div className="pt-2 border-t border-[#45475a]">
-            <p className="text-[11px] text-[#6c7086] mb-3">
-              💡 Use <code className="bg-[#313244] px-1 rounded">*</code> for wildcards. Example: <code className="bg-[#313244] px-1 rounded">*.ts</code> matches all TypeScript files.
+          <div className="pt-2 border-t border-[#4b5563]">
+            <p className="text-[11px] text-[#6b7280] mb-3">
+              💡 Use <code className="bg-[#374151] px-1 rounded">*</code> for wildcards. Example: <code className="bg-[#374151] px-1 rounded">*.ts</code> matches all TypeScript files.
             </p>
             <div className="flex gap-2 justify-end">
               <button onClick={onClose} className="btn">Cancel</button>
@@ -648,7 +652,7 @@ function FolderTreeView({ nodes, statusFilter, ignoredDirNames, onExpand, onComp
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-[#1a1a2e]">
+    <div className="flex flex-col h-full overflow-hidden bg-[#252d37]">
       {ignoredDirNames.length > 0 && (
         <div className="flex items-start gap-2 px-4 py-2 bg-[#3a2a1e] border-b border-[#e3b341]/40 text-[#f4c878] text-xs shrink-0">
           <span className="shrink-0 mt-0.5 text-sm">⚠️</span>
@@ -657,7 +661,7 @@ function FolderTreeView({ nodes, statusFilter, ignoredDirNames, onExpand, onComp
       )}
 
       {/* Table header */}
-      <div className="flex items-center px-4 py-2 bg-[#0f0f1f] border-b border-[#45475a] text-xs font-semibold text-[#89b4fa] shrink-0">
+      <div className="flex items-center px-4 py-2 bg-[#12161c] border-b border-[#4b5563] text-xs font-semibold text-[#3b82f6] shrink-0">
         <div className="flex-1 min-w-0">Name</div>
         <div className="w-14 text-center">Status</div>
         <div className="w-20 text-right">Left</div>
@@ -668,7 +672,7 @@ function FolderTreeView({ nodes, statusFilter, ignoredDirNames, onExpand, onComp
       {/* Tree items */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {filtered.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-[#6c7086]">
+          <div className="flex items-center justify-center h-full text-[#6b7280]">
             <div className="text-center">
               <div className="text-3xl mb-2">📭</div>
               <p>No items to display</p>
@@ -696,19 +700,19 @@ function TreeRow({ node, onExpand, onCompare, onCopy }: {
       {/* Name with indent */}
       <div className="flex-1 min-w-0 flex items-center gap-1.5" style={{ paddingLeft: indent }}>
         {node.isDirectory ? (
-          <button onClick={() => onExpand(node.path)} className="flex items-center gap-1 hover:text-[#89b4fa] transition-colors min-w-0">
-            <span className="text-[10px] text-[#6c7086] w-3 shrink-0">{node.expanded ? '▾' : '▸'}</span>
+          <button onClick={() => onExpand(node.path)} className="flex items-center gap-1 hover:text-[#cc3333] transition-colors min-w-0">
+            <span className="text-[10px] text-[#6b7280] w-3 shrink-0">{node.expanded ? '▾' : '▸'}</span>
             <span className="shrink-0">📁</span>
-            <span className="truncate text-sm text-[#cdd6f4] font-medium">{node.name}</span>
+            <span className="truncate text-sm text-[#e5e7eb] font-medium">{node.name}</span>
           </button>
         ) : (
           <button
             onClick={() => { if (node.leftHandle && node.rightHandle) onCompare(node); }}
-            className="flex items-center gap-1 hover:text-[#89b4fa] transition-colors min-w-0"
+            className="flex items-center gap-1 hover:text-[#cc3333] transition-colors min-w-0"
           >
             <span className="w-3 shrink-0" />
             <span className="shrink-0 text-base opacity-90">{getFileIcon(node.name)}</span>
-            <span className="truncate text-sm text-[#cdd6f4] font-medium">{node.name}</span>
+            <span className="truncate text-sm text-[#e5e7eb] font-medium">{node.name}</span>
           </button>
         )}
       </div>
@@ -721,12 +725,12 @@ function TreeRow({ node, onExpand, onCompare, onCopy }: {
       </div>
 
       {/* Left size */}
-      <div className="w-20 text-right text-xs text-[#a6adc8]">
+      <div className="w-20 text-right text-xs text-[#9ca3af]">
         {!node.isDirectory && node.leftSize !== undefined ? formatSize(node.leftSize) : ''}
       </div>
 
       {/* Right size */}
-      <div className="w-20 text-right text-xs text-[#a6adc8]">
+      <div className="w-20 text-right text-xs text-[#9ca3af]">
         {!node.isDirectory && node.rightSize !== undefined ? formatSize(node.rightSize) : ''}
       </div>
 
@@ -735,17 +739,17 @@ function TreeRow({ node, onExpand, onCompare, onCopy }: {
         {!node.isDirectory && (
           <>
             {node.leftHandle && node.rightHandle && node.status === 'different' && (
-              <button onClick={() => onCompare(node)} className="px-1.5 py-1 text-xs bg-[#313244] text-[#89b4fa] hover:bg-[#3d3d56] rounded" title="Compare files">
+              <button onClick={() => onCompare(node)} className="px-1.5 py-1 text-xs bg-[#374151] text-[#3b82f6] hover:bg-[#4b5563] rounded" title="Compare files">
                 🔍
               </button>
             )}
             {node.status !== 'same' && node.leftHandle && (
-              <button onClick={() => onCopy(node, 'left', 'right')} className="px-1.5 py-1 text-xs bg-[#313244] text-[#56d364] hover:bg-[#2a4a2a] rounded" title="Copy left → right">
+              <button onClick={() => onCopy(node, 'left', 'right')} className="px-1.5 py-1 text-xs bg-[#374151] text-[#56d364] hover:bg-[#2a4a2a] rounded" title="Copy left → right">
                 ➜
               </button>
             )}
             {node.status !== 'same' && node.rightHandle && (
-              <button onClick={() => onCopy(node, 'right', 'left')} className="px-1.5 py-1 text-xs bg-[#313244] text-[#56d364] hover:bg-[#2a4a2a] rounded" title="Copy right ← left">
+              <button onClick={() => onCopy(node, 'right', 'left')} className="px-1.5 py-1 text-xs bg-[#374151] text-[#56d364] hover:bg-[#2a4a2a] rounded" title="Copy right ← left">
                 ⬅
               </button>
             )}
@@ -758,12 +762,12 @@ function TreeRow({ node, onExpand, onCompare, onCopy }: {
 
 function PathBar({ path, onOpen, fsApiSupported, isFile }: { path: string; onOpen: () => void; fsApiSupported: boolean; isFile?: boolean }) {
   return (
-    <div className="flex items-center gap-2 h-10 px-3 bg-[#1a1a2e] overflow-hidden">
+    <div className="flex items-center gap-2 h-10 px-3 bg-[#252d37] overflow-hidden">
       {!isFile && fsApiSupported && (
         <button onClick={onOpen} className="btn btn-sm shrink-0 text-[11px]">📂</button>
       )}
       <div className="flex items-center gap-2 flex-1 min-w-0">
-        <span className="text-sm truncate text-[#cdd6f4] font-mono" title={path}>
+        <span className="text-sm truncate text-[#e5e7eb] font-mono" title={path}>
           {path || (isFile ? '' : 'No folder selected')}
         </span>
       </div>

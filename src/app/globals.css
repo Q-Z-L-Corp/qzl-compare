@@ -1,43 +1,66 @@
 @import "tailwindcss";
 
-/* ── Custom diff colours (not easily expressible with Tailwind utilities) ── */
+/* ── Beyond Compare–inspired theme tokens ── */
 :root {
-  --diff-ins-bg:      #152220;
+  /* Background tones (neutral charcoal) */
+  --bc-bg-darkest:   #12161c;
+  --bc-bg-dark:      #181d24;
+  --bc-bg-medium:    #1e242c;
+  --bc-bg-panel:     #252d37;
+  --bc-bg-elevated:  #2f3842;
+  --bc-bg-button:    #374151;
+  --bc-border:       #4b5563;
+  --bc-border-hover: #5d6b7a;
+
+  /* Text */
+  --bc-text-muted:   #6b7280;
+  --bc-text-secondary:#9ca3af;
+  --bc-text-primary: #e5e7eb;
+
+  /* Accent – BC Red */
+  --bc-red:          #cc3333;
+  --bc-red-hover:    #b52d2d;
+  /* Accent – BC Blue */
+  --bc-blue:         #3b82f6;
+  --bc-blue-hover:   #2563eb;
+
+  /* Diff colours */
+  --diff-ins-bg:      #162420;
   --diff-ins-num:     #0f1a18;
   --diff-ins-border:  #2ea043;
   --diff-ins-inline:  #0d3d28;
 
-  --diff-del-bg:      #2a1515;
+  --diff-del-bg:      #2c1616;
   --diff-del-num:     #1f0f0f;
   --diff-del-border:  #f85149;
   --diff-del-inline:  #6b1515;
 
   --diff-rep-old-bg:  #2b1d0a;
   --diff-rep-old-num: #1f1505;
-  --diff-rep-new-bg:  #132608;
+  --diff-rep-new-bg:  #142608;
   --diff-rep-new-num: #0d1a06;
 }
 
 /* ── Scrollbars ── */
 ::-webkit-scrollbar            { width: 10px; height: 10px; }
-::-webkit-scrollbar-track      { background: #0a0a12; }
-::-webkit-scrollbar-thumb      { background: #45475a; border-radius: 5px; transition: background 0.2s ease; }
-::-webkit-scrollbar-thumb:hover{ background: #585b70; }
+::-webkit-scrollbar-track      { background: var(--bc-bg-darkest); }
+::-webkit-scrollbar-thumb      { background: var(--bc-border); border-radius: 5px; transition: background 0.2s ease; }
+::-webkit-scrollbar-thumb:hover{ background: var(--bc-border-hover); }
 
 /* ── Monospace diff cells ── */
 .diff-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  border-bottom: 1px solid rgba(69,71,90,0.15);
+  border-bottom: 1px solid rgba(75,85,99,0.15);
   transition: background-color 0.15s ease;
 }
-.diff-row:hover { background: rgba(137,180,250,0.06); }
-.diff-row.current-diff { outline: 2px solid #89b4fa; outline-offset: -2px; background: rgba(137,180,250,0.08); }
+.diff-row:hover { background: rgba(59,130,246,0.06); }
+.diff-row.current-diff { outline: 2px solid var(--bc-red); outline-offset: -2px; background: rgba(204,51,51,0.08); }
 
 .diff-cell        { display: flex; align-items: stretch; min-height: 20px; overflow: hidden; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 13px; line-height: 20px; }
-.diff-cell.left   { border-right: 3px solid #13131f; }
+.diff-cell.left   { border-right: 3px solid var(--bc-bg-medium); }
 
-.diff-cell.equal        .line-num { background: #2a2a3a; border-right-color: #45475a; }
+.diff-cell.equal        .line-num { background: var(--bc-bg-elevated); border-right-color: var(--bc-border); }
 .diff-cell.insert       { background: var(--diff-ins-bg); }
 .diff-cell.insert       .line-num { background: var(--diff-ins-num); border-right-color: var(--diff-ins-border); }
 .diff-cell.delete       { background: var(--diff-del-bg); }
@@ -50,16 +73,16 @@
   background: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(0,0,0,0.12) 5px, rgba(0,0,0,0.12) 10px);
   opacity: 0.6;
 }
-.diff-cell.empty .line-num { background: transparent; border-right-color: #45475a; }
+.diff-cell.empty .line-num { background: transparent; border-right-color: var(--bc-border); }
 
 .line-num {
   flex-shrink: 0;
   width: 46px;
   padding: 0 6px 0 4px;
   text-align: right;
-  color: #6c7086;
-  background: #2a2a3a;
-  border-right: 1px solid #45475a;
+  color: var(--bc-text-muted);
+  background: var(--bc-bg-elevated);
+  border-right: 1px solid var(--bc-border);
   user-select: none;
   font-size: 11px;
   line-height: 20px;
@@ -71,7 +94,7 @@
   overflow: visible;
   line-height: 20px;
   tab-size: 4;
-  color: #cdd6f4;
+  color: var(--bc-text-primary);
 }
 
 .inline-del { background: var(--diff-del-inline); border-radius: 2px; }
@@ -80,22 +103,22 @@
 /* ── Reusable button base classes ── */
 .btn {
   @apply inline-flex items-center gap-1 px-3 py-1 rounded-md text-[13px]
-         bg-[#313244] text-[#cdd6f4] border border-[#45475a]
+         bg-[#374151] text-[#e5e7eb] border border-[#4b5563]
          cursor-pointer select-none whitespace-nowrap
-         transition-all hover:bg-[#45475a] hover:border-[#585b70] active:bg-[#585b70];
+         transition-all hover:bg-[#4b5563] hover:border-[#5d6b7a] active:bg-[#5d6b7a];
 }
 .btn-active {
-  @apply bg-[#89b4fa] text-[#1e1e2e] border-[#89b4fa] shadow-md;
+  @apply bg-[#cc3333] text-white border-[#cc3333] shadow-md;
 }
 .btn-active:hover {
-  @apply bg-[#74a8f0] border-[#74a8f0];
+  @apply bg-[#b52d2d] border-[#b52d2d];
 }
 .btn-sm {
   @apply px-2.5 py-0.5 text-xs font-medium;
 }
 
 /* ── Equal section collapser ── */
-.diff-collapser { border-bottom: 1px solid rgba(69,71,90,0.2); }
+.diff-collapser { border-bottom: 1px solid rgba(75,85,99,0.2); }
 .diff-collapser-inner {
   display: flex;
   align-items: center;
@@ -108,9 +131,9 @@
   gap: 6px;
   padding: 2px 20px;
   font-size: 11px;
-  color: #6c7086;
+  color: var(--bc-text-muted);
   background: transparent;
-  border: 1px dashed #45475a;
+  border: 1px dashed var(--bc-border);
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -118,9 +141,9 @@
   user-select: none;
 }
 .diff-collapser-btn:hover {
-  background: rgba(69,71,90,0.25);
-  color: #a6adc8;
-  border-color: #6c7086;
+  background: rgba(75,85,99,0.25);
+  color: var(--bc-text-secondary);
+  border-color: var(--bc-text-muted);
   border-style: solid;
 }
 .diff-collapser-icon { font-size: 9px; opacity: 0.6; }

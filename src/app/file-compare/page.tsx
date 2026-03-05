@@ -280,8 +280,8 @@ export default function FileComparePage() {
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       {/* Title bar */}
-      <header className="flex items-center h-10 px-4 bg-[#0a0a12] border-b border-[#45475a] shrink-0">
-        <div className="flex items-center gap-2 text-[#89b4fa] font-bold text-sm select-none">
+      <header className="flex items-center h-10 px-4 bg-[#12161c] border-b border-[#4b5563] shrink-0">
+        <div className="flex items-center gap-2 text-[#cc3333] font-bold text-sm select-none">
           <span className="text-lg">⚖️</span>
           <span className="tracking-tight">
             {leftFile && rightFile
@@ -296,27 +296,27 @@ export default function FileComparePage() {
       <MenuBar menus={menus} />
 
       {/* Toolbar */}
-      <div className="flex items-center gap-1 h-11 px-3 bg-[#0a0a12] border-b-2 border-[#45475a] shrink-0 overflow-x-auto">
+      <div className="flex items-center gap-1 h-11 px-3 bg-[#12161c] border-b-2 border-[#4b5563] shrink-0 overflow-x-auto">
         {/* Home */}
         <button onClick={() => router.push('/')} className="btn btn-sm gap-1.5" title="Home">
           🏠 <span className="hidden sm:inline text-[11px]">Home</span>
         </button>
 
-        <div className="w-px h-7 bg-[#45475a]/40" />
+        <div className="w-px h-7 bg-[#4b5563]/40" />
 
         {/* Diff navigation */}
         {hasDiffs && (
           <>
-            <div className="flex items-center gap-0.5 bg-[#1a1a2e] p-0.5 rounded-lg border border-[#45475a]/50">
+            <div className="flex items-center gap-0.5 bg-[#252d37] p-0.5 rounded-lg border border-[#4b5563]/50">
               <button onClick={goFirstDiff} className="btn btn-sm px-2" title="First difference (Ctrl+Home)">⏮</button>
               <button onClick={() => navigateDiff(-1)} className="btn btn-sm px-2" title="Previous difference (F7)">◀</button>
-              <span className="text-xs text-[#a6adc8] px-2.5 py-1 bg-[#0a0a12] border border-[#45475a]/50 rounded min-w-[60px] text-center tabular-nums select-none font-semibold">
+              <span className="text-xs text-[#9ca3af] px-2.5 py-1 bg-[#12161c] border border-[#4b5563]/50 rounded min-w-[60px] text-center tabular-nums select-none font-semibold">
                 {currentDiff + 1}/{diffCount}
               </span>
               <button onClick={() => navigateDiff(+1)} className="btn btn-sm px-2" title="Next difference (F8)">▶</button>
               <button onClick={goLastDiff} className="btn btn-sm px-2" title="Last difference (Ctrl+End)">⏭</button>
             </div>
-            <div className="w-px h-7 bg-[#45475a]/40" />
+            <div className="w-px h-7 bg-[#4b5563]/40" />
           </>
         )}
 
@@ -334,7 +334,7 @@ export default function FileComparePage() {
           📋 <span className="hidden sm:inline text-[11px]">Context</span>
         </button>
 
-        <div className="w-px h-7 bg-[#45475a]/40" />
+        <div className="w-px h-7 bg-[#4b5563]/40" />
 
         {/* Copy / Sync buttons */}
         {showSync && hasDiffs && (
@@ -353,7 +353,7 @@ export default function FileComparePage() {
             >
               <span className="hidden sm:inline text-[11px]">← Copy</span> 📥
             </button>
-            <div className="w-px h-7 bg-[#45475a]/40" />
+            <div className="w-px h-7 bg-[#4b5563]/40" />
           </>
         )}
 
@@ -377,13 +377,13 @@ export default function FileComparePage() {
             ⚙️ Options
           </button>
           {showOptions && (
-            <div className="absolute top-full right-0 mt-1 w-64 bg-[#1a1a2e] border border-[#45475a] rounded-lg shadow-2xl z-50 p-3 space-y-3">
+            <div className="absolute top-full right-0 mt-1 w-64 bg-[#252d37] border border-[#4b5563] rounded-lg shadow-lg z-50 p-3 space-y-3">
               <div>
-                <label className="text-xs font-semibold text-[#cdd6f4] block mb-1.5">Ignore Whitespace</label>
+                <label className="text-xs font-semibold text-[#e5e7eb] block mb-1.5">Ignore Whitespace</label>
                 <select
                   value={comparisonOptions.ignoreWhitespace}
                   onChange={(e) => updateOption('ignoreWhitespace', e.target.value as ComparisonOptions['ignoreWhitespace'])}
-                  className="w-full px-2 py-1 text-xs bg-[#313244] text-[#cdd6f4] border border-[#45475a] rounded"
+                  className="w-full px-2 py-1 text-xs bg-[#374151] text-[#e5e7eb] border border-[#4b5563] rounded"
                 >
                   <option value="none">None</option>
                   <option value="trailing">Trailing spaces</option>
@@ -392,18 +392,18 @@ export default function FileComparePage() {
                 </select>
               </div>
               <div className="flex items-center gap-2">
-                <input type="checkbox" id="cs" checked={comparisonOptions.caseSensitive} onChange={(e) => updateOption('caseSensitive', e.target.checked)} className="accent-[#89b4fa]" />
-                <label htmlFor="cs" className="text-xs text-[#a6adc8] cursor-pointer">Case sensitive</label>
+                <input type="checkbox" id="cs" checked={comparisonOptions.caseSensitive} onChange={(e) => updateOption('caseSensitive', e.target.checked)} className="accent-[#cc3333]" />
+                <label htmlFor="cs" className="text-xs text-[#9ca3af] cursor-pointer">Case sensitive</label>
               </div>
               <div className="flex items-center gap-2">
-                <input type="checkbox" id="ile" checked={comparisonOptions.ignoreLineEndings} onChange={(e) => updateOption('ignoreLineEndings', e.target.checked)} className="accent-[#89b4fa]" />
-                <label htmlFor="ile" className="text-xs text-[#a6adc8] cursor-pointer">Ignore line endings (CRLF vs LF)</label>
+                <input type="checkbox" id="ile" checked={comparisonOptions.ignoreLineEndings} onChange={(e) => updateOption('ignoreLineEndings', e.target.checked)} className="accent-[#cc3333]" />
+                <label htmlFor="ile" className="text-xs text-[#9ca3af] cursor-pointer">Ignore line endings (CRLF vs LF)</label>
               </div>
               <div className="flex items-center gap-2">
-                <input type="checkbox" id="sln" checked={comparisonOptions.showLineNumbers} onChange={(e) => updateOption('showLineNumbers', e.target.checked)} className="accent-[#89b4fa]" />
-                <label htmlFor="sln" className="text-xs text-[#a6adc8] cursor-pointer">Show line numbers</label>
+                <input type="checkbox" id="sln" checked={comparisonOptions.showLineNumbers} onChange={(e) => updateOption('showLineNumbers', e.target.checked)} className="accent-[#cc3333]" />
+                <label htmlFor="sln" className="text-xs text-[#9ca3af] cursor-pointer">Show line numbers</label>
               </div>
-              <div className="pt-2 border-t border-[#45475a] text-[11px] text-[#6c7086]">
+              <div className="pt-2 border-t border-[#4b5563] text-[11px] text-[#6b7280]">
                 💡 Changes take effect immediately
               </div>
             </div>
@@ -412,7 +412,7 @@ export default function FileComparePage() {
       </div>
 
       {/* File path bars */}
-      <div className="grid shrink-0 bg-[#0f0f1f] border-b-2 border-[#45475a]"
+      <div className="grid shrink-0 bg-[#181d24] border-b-2 border-[#4b5563]"
            style={{ gridTemplateColumns: '1fr 3px 1fr' }}>
         <FilePathBar
           file={leftFile}
@@ -420,7 +420,7 @@ export default function FileComparePage() {
           fsApiSupported={fsApiSupported}
           placeholder="Left file"
         />
-        <div className="bg-[#45475a]/30" />
+        <div className="bg-[#4b5563]/30" />
         <FilePathBar
           file={rightFile}
           onOpen={() => openFile('right')}
@@ -430,12 +430,12 @@ export default function FileComparePage() {
       </div>
 
       {/* Main content */}
-      <main className="flex-1 overflow-hidden flex flex-col bg-[#0f0f1f]">
+      <main className="flex-1 overflow-hidden flex flex-col bg-[#181d24]">
         {view === 'empty' && (
-          <div className="flex items-center justify-center h-full text-[#6c7086]">
+          <div className="flex items-center justify-center h-full text-[#6b7280]">
             <div className="text-center">
               <div className="text-5xl mb-4">📄</div>
-              <p className="text-lg font-semibold text-[#a6adc8] mb-2">File Compare</p>
+              <p className="text-lg font-semibold text-[#9ca3af] mb-2">File Compare</p>
               <p className="text-sm mb-6">Open two files to compare them side by side</p>
               {fsApiSupported ? (
                 <div className="flex gap-3 justify-center">
@@ -462,14 +462,14 @@ export default function FileComparePage() {
       </main>
 
       {/* Status bar */}
-      <footer className="flex justify-between items-center h-8 px-4 bg-[#0a0a12] border-t-2 border-[#45475a] text-xs text-[#a6adc8] shrink-0 font-medium">
+      <footer className="flex justify-between items-center h-8 px-4 bg-[#12161c] border-t-2 border-[#4b5563] text-xs text-[#9ca3af] shrink-0 font-medium">
         <span className="flex items-center gap-2">
-          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#89b4fa] text-[#0a0a12] text-[9px] font-bold">i</span>
+          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#3b82f6] text-white text-[9px] font-bold">i</span>
           <span>{statusMsg}</span>
         </span>
         <div className="flex items-center gap-4">
-          {statusRight && <span className="text-[#6c7086] text-[11px]">{statusRight}</span>}
-          {diffFilter !== 'all' && <span className="text-[#e3b341] text-[11px]">Filter: {diffFilter}</span>}
+          {statusRight && <span className="text-[#6b7280] text-[11px]">{statusRight}</span>}
+          {diffFilter !== 'all' && <span className="text-[#cc3333] text-[11px]">Filter: {diffFilter}</span>}
         </div>
       </footer>
 
@@ -478,11 +478,11 @@ export default function FileComparePage() {
       {/* About dialog */}
       {showAbout && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60" onClick={() => setShowAbout(false)}>
-          <div className="bg-[#1a1a2e] border border-[#45475a] rounded-xl shadow-2xl p-6 max-w-sm text-center" onClick={e => e.stopPropagation()}>
+          <div className="bg-[#252d37] border border-[#4b5563] rounded-xl shadow-2xl p-6 max-w-sm text-center" onClick={e => e.stopPropagation()}>
             <div className="text-5xl mb-3">⚖️</div>
-            <h2 className="text-xl font-bold text-[#cdd6f4] mb-1">QZL Compare</h2>
-            <p className="text-sm text-[#a6adc8] mb-2">Version 0.1.0</p>
-            <p className="text-xs text-[#6c7086] mb-4">Free browser-based file & folder comparison tool.<br/>All processing happens locally.</p>
+            <h2 className="text-xl font-bold text-[#e5e7eb] mb-1">QZL Compare</h2>
+            <p className="text-sm text-[#9ca3af] mb-2">Version 0.1.0</p>
+            <p className="text-xs text-[#6b7280] mb-4">Free browser-based file & folder comparison tool.<br/>All processing happens locally.</p>
             <button onClick={() => setShowAbout(false)} className="btn">Close</button>
           </div>
         </div>
@@ -498,17 +498,17 @@ function FilePathBar({ file, onOpen, fsApiSupported, placeholder }: {
   placeholder: string;
 }) {
   return (
-    <div className="flex items-center gap-2 px-3 bg-[#1a1a2e] overflow-hidden">
+    <div className="flex items-center gap-2 px-3 bg-[#252d37] overflow-hidden">
       {fsApiSupported && (
         <button onClick={onOpen} className="btn btn-sm shrink-0 text-[11px] my-1">📂</button>
       )}
       <div className="flex flex-col flex-1 min-w-0 py-1.5">
-        <span className="px-2 py-0.5 text-sm font-mono truncate bg-[#0a0a12] border border-[#45475a]/40 rounded text-[#cdd6f4]"
+        <span className="px-2 py-0.5 text-sm font-mono truncate bg-[#12161c] border border-[#4b5563]/40 rounded text-[#e5e7eb]"
               title={file?.name}>
           {file?.name || placeholder}
         </span>
         {file && (
-          <span className="text-[10px] text-[#6c7086] mt-0.5 px-1 truncate">
+          <span className="text-[10px] text-[#6b7280] mt-0.5 px-1 truncate">
             {formatSize(file.size)} • UTF-8
           </span>
         )}

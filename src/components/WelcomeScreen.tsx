@@ -9,16 +9,16 @@ interface WelcomeScreenProps {
 
 export default function WelcomeScreen({ onCompareFiles, onCompareFolders, onCompareText, fsApiSupported }: WelcomeScreenProps) {
   return (
-    <div className="flex items-center justify-center h-full p-10 bg-gradient-to-b from-[#1a1a2e] to-[#0f0f1f]">
+    <div className="flex items-center justify-center h-full p-10 bg-gradient-to-b from-[#252d37] to-[#181d24]">
       <div className="text-center max-w-2xl">
         <div className="mb-6 text-6xl select-none">⚖️</div>
-        <h1 className="text-4xl font-bold mb-3 bg-gradient-to-r from-[#89b4fa] to-[#74a8f0] bg-clip-text text-transparent">QZL Compare</h1>
-        <p className="text-lg text-[#a6adc8] leading-relaxed mb-2">
+        <h1 className="text-4xl font-bold mb-3 bg-gradient-to-r from-[#cc3333] to-[#3b82f6] bg-clip-text text-transparent">QZL Compare</h1>
+        <p className="text-lg text-[#9ca3af] leading-relaxed mb-2">
           A free, browser-based file & folder comparison tool
         </p>
-        <p className="text-sm text-[#6c7086] leading-relaxed mb-10">
+        <p className="text-sm text-[#6b7280] leading-relaxed mb-10">
           Process files directly in your browser using the{' '}
-          <span className="font-semibold text-[#89b4fa]">File System Access API</span>. Nothing is uploaded to any server.
+          <span className="font-semibold text-[#cc3333]">File System Access API</span>. Nothing is uploaded to any server.
         </p>
 
         <div className="flex gap-4 justify-center flex-wrap mb-8">
@@ -26,16 +26,16 @@ export default function WelcomeScreen({ onCompareFiles, onCompareFolders, onComp
             <>
               <button
                 onClick={onCompareFiles}
-                className="px-6 py-3 rounded-lg bg-gradient-to-r from-[#89b4fa] to-[#74a8f0] text-[#1e1e2e] font-bold text-sm
-                           hover:from-[#74a8f0] hover:to-[#5a98eb] transition-all shadow-lg hover:shadow-xl"
+                className="px-6 py-3 rounded-lg bg-gradient-to-r from-[#cc3333] to-[#b52d2d] text-white font-bold text-sm
+                           hover:from-[#b52d2d] hover:to-[#a02828] transition-all shadow-lg hover:shadow-xl"
                 title="Compare two files"
               >
                 📄 Compare Files
               </button>
               <button
                 onClick={onCompareFolders}
-                className="px-6 py-3 rounded-lg bg-gradient-to-r from-[#89b4fa] to-[#74a8f0] text-[#1e1e2e] font-bold text-sm
-                           hover:from-[#74a8f0] hover:to-[#5a98eb] transition-all shadow-lg hover:shadow-xl"
+                className="px-6 py-3 rounded-lg bg-gradient-to-r from-[#cc3333] to-[#b52d2d] text-white font-bold text-sm
+                           hover:from-[#b52d2d] hover:to-[#a02828] transition-all shadow-lg hover:shadow-xl"
                 title="Compare two folders"
               >
                 📁 Compare Folders
@@ -49,15 +49,15 @@ export default function WelcomeScreen({ onCompareFiles, onCompareFolders, onComp
           )}
           <button
             onClick={onCompareText}
-            className="px-6 py-3 rounded-lg bg-[#313244] text-[#cdd6f4] font-bold text-sm
-                       border-2 border-[#45475a] hover:bg-[#45475a] hover:border-[#585b70] transition-all"
+            className="px-6 py-3 rounded-lg bg-[#374151] text-[#e5e7eb] font-bold text-sm
+                       border-2 border-[#4b5563] hover:bg-[#4b5563] hover:border-[#5d6b7a] transition-all"
             title="Compare text snippets without file system access"
           >
             📝 Compare Text
           </button>
         </div>
 
-        <div className="pt-6 border-t border-[#45475a] text-xs text-[#6c7086] space-y-2">
+        <div className="pt-6 border-t border-[#4b5563] text-xs text-[#6b7280] space-y-2">
           <p>💡 <strong>Features:</strong> Side-by-side comparison, syntax highlighting, diff navigation, file copying</p>
           <p>🔒 <strong>Privacy:</strong> All processing happens locally in your browser</p>
         </div>

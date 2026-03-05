@@ -176,8 +176,8 @@ export default function TextComparePage() {
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       {/* Title bar */}
-      <header className="flex items-center h-10 px-4 bg-[#0a0a12] border-b border-[#45475a] shrink-0">
-        <div className="flex items-center gap-2 text-[#89b4fa] font-bold text-sm select-none">
+      <header className="flex items-center h-10 px-4 bg-[#12161c] border-b border-[#4b5563] shrink-0">
+        <div className="flex items-center gap-2 text-[#cc3333] font-bold text-sm select-none">
           <span className="text-lg">⚖️</span>
           <span className="tracking-tight">Text Compare - QZL Compare</span>
         </div>
@@ -187,11 +187,11 @@ export default function TextComparePage() {
       <MenuBar menus={menus} />
 
       {/* Toolbar */}
-      <div className="flex items-center gap-1 h-11 px-3 bg-[#0a0a12] border-b-2 border-[#45475a] shrink-0 overflow-x-auto">
+      <div className="flex items-center gap-1 h-11 px-3 bg-[#12161c] border-b-2 border-[#4b5563] shrink-0 overflow-x-auto">
         <button onClick={() => router.push('/')} className="btn btn-sm gap-1.5" title="Home">
           🏠 <span className="hidden sm:inline text-[11px]">Home</span>
         </button>
-        <div className="w-px h-7 bg-[#45475a]/40" />
+        <div className="w-px h-7 bg-[#4b5563]/40" />
 
         {fsApiSupported && (
           <>
@@ -201,7 +201,7 @@ export default function TextComparePage() {
             <button onClick={() => loadTextFromFile('right')} className="btn btn-sm" title="Load file into right panel">
               📂 <span className="hidden sm:inline text-[11px]">Load Right</span>
             </button>
-            <div className="w-px h-7 bg-[#45475a]/40" />
+            <div className="w-px h-7 bg-[#4b5563]/40" />
           </>
         )}
 
@@ -214,7 +214,7 @@ export default function TextComparePage() {
 
         {fsApiSupported && leftText && (
           <>
-            <div className="w-px h-7 bg-[#45475a]/40" />
+            <div className="w-px h-7 bg-[#4b5563]/40" />
             <button onClick={() => saveTextToFile('left')} className="btn btn-sm" title="Save left text to file">
               💾 <span className="hidden sm:inline text-[11px]">Save Left</span>
             </button>
@@ -227,7 +227,7 @@ export default function TextComparePage() {
         )}
 
         <div className="flex-1" />
-        <span className="text-xs text-[#6c7086]">
+        <span className="text-xs text-[#6b7280]">
           📊 {diffCount} diff{diffCount !== 1 ? 's' : ''} • {leftLines}/{rightLines} lines
         </span>
       </div>
@@ -243,7 +243,7 @@ export default function TextComparePage() {
           placeholder="Paste or type left text here…"
         />
         {/* Divider */}
-        <div className="bg-[#45475a]/40" />
+        <div className="bg-[#4b5563]/40" />
         {/* Right panel */}
         <InlineEditorPanel
           text={rightText}
@@ -255,12 +255,12 @@ export default function TextComparePage() {
       </div>
 
       {/* Status bar */}
-      <footer className="flex justify-between items-center h-8 px-4 bg-[#0a0a12] border-t-2 border-[#45475a] text-xs text-[#a6adc8] shrink-0 font-medium">
+      <footer className="flex justify-between items-center h-8 px-4 bg-[#12161c] border-t-2 border-[#4b5563] text-xs text-[#9ca3af] shrink-0 font-medium">
         <span className="flex items-center gap-2">
-          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#89b4fa] text-[#0a0a12] text-[9px] font-bold">i</span>
+          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#3b82f6] text-white text-[9px] font-bold">i</span>
           <span>{statusMsg}</span>
         </span>
-        {statusRight && <span className="text-[#6c7086] text-[11px]">{statusRight}</span>}
+        {statusRight && <span className="text-[#6b7280] text-[11px]">{statusRight}</span>}
       </footer>
 
       <Toast toasts={toasts} onRemove={removeToast} />
@@ -268,11 +268,11 @@ export default function TextComparePage() {
       {/* About dialog */}
       {showAbout && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60" onClick={() => setShowAbout(false)}>
-          <div className="bg-[#1a1a2e] border border-[#45475a] rounded-xl shadow-2xl p-6 max-w-sm text-center" onClick={e => e.stopPropagation()}>
+          <div className="bg-[#252d37] border border-[#4b5563] rounded-xl shadow-2xl p-6 max-w-sm text-center" onClick={e => e.stopPropagation()}>
             <div className="text-5xl mb-3">⚖️</div>
-            <h2 className="text-xl font-bold text-[#cdd6f4] mb-1">QZL Compare</h2>
-            <p className="text-sm text-[#a6adc8] mb-2">Version 0.1.0</p>
-            <p className="text-xs text-[#6c7086] mb-4">Free browser-based file & folder comparison tool.<br/>All processing happens locally.</p>
+            <h2 className="text-xl font-bold text-[#e5e7eb] mb-1">QZL Compare</h2>
+            <p className="text-sm text-[#9ca3af] mb-2">Version 0.1.0</p>
+            <p className="text-xs text-[#6b7280] mb-4">Free browser-based file & folder comparison tool.<br/>All processing happens locally.</p>
             <button onClick={() => setShowAbout(false)} className="btn">Close</button>
           </div>
         </div>
@@ -315,7 +315,7 @@ function InlineEditorPanel({ text, onChange, lineStatus, side, placeholder }: In
       case 'delete': return 'bg-[#2a1515]';
       case 'insert': return 'bg-[#152220]';
       case 'replace': return side === 'left' ? 'bg-[#2b1d0a]' : 'bg-[#132608]';
-      default: return 'bg-[#1a1a2e]';
+      default: return 'bg-[#252d37]';
     }
   }
 
@@ -335,17 +335,17 @@ function InlineEditorPanel({ text, onChange, lineStatus, side, placeholder }: In
       case 'delete': return 'text-[#f85149]';
       case 'insert': return 'text-[#56d364]';
       case 'replace': return 'text-[#e3b341]';
-      default: return 'text-[#6c7086]';
+      default: return 'text-[#6b7280]';
     }
   }
 
   return (
-    <div className="flex flex-col overflow-hidden bg-[#13131f]">
+    <div className="flex flex-col overflow-hidden bg-[#181d24]">
       {/* Label bar */}
-      <div className="flex items-center h-9 px-3 bg-[#1a1a2e] border-b border-[#45475a] shrink-0">
-        <span className="text-xs font-bold text-[#89b4fa] uppercase tracking-wider select-none">{sideLabel}</span>
+      <div className="flex items-center h-9 px-3 bg-[#252d37] border-b border-[#4b5563] shrink-0">
+        <span className="text-xs font-bold text-[#cc3333] uppercase tracking-wider select-none">{sideLabel}</span>
         {text && (
-          <span className="text-[11px] text-[#6c7086] ml-3 select-none tabular-nums">
+          <span className="text-[11px] text-[#6b7280] ml-3 select-none tabular-nums">
             {lineCount} line{lineCount !== 1 ? 's' : ''} • {text.length} char{text.length !== 1 ? 's' : ''}
           </span>
         )}
@@ -354,7 +354,7 @@ function InlineEditorPanel({ text, onChange, lineStatus, side, placeholder }: In
       <div className="relative flex-1 overflow-hidden">
         {/* Line numbers */}
         <div
-          className="absolute left-0 top-0 bottom-0 overflow-hidden z-10 border-r border-[#45475a]"
+          className="absolute left-0 top-0 bottom-0 overflow-hidden z-10 border-r border-[#4b5563]"
           style={{ width: 46, pointerEvents: 'none' }}
         >
           <div ref={lineNumRef} style={{ height: contentHeight, willChange: 'transform' }}>
@@ -390,7 +390,7 @@ function InlineEditorPanel({ text, onChange, lineStatus, side, placeholder }: In
           value={text}
           onChange={e => onChange(e.target.value)}
           onScroll={syncScroll}
-          className="absolute top-0 bottom-0 bg-transparent text-[#cdd6f4] resize-none outline-none focus:ring-0 selection:bg-[#89b4fa]/20"
+          className="absolute top-0 bottom-0 bg-transparent text-[#e5e7eb] resize-none outline-none focus:ring-0 selection:bg-[#cc3333]/20"
           style={{
             left: 46,
             right: 0,
@@ -400,7 +400,7 @@ function InlineEditorPanel({ text, onChange, lineStatus, side, placeholder }: In
             fontSize: 13,
             fontFamily: "'Consolas', 'Monaco', 'Courier New', monospace",
             padding: '0 8px',
-            caretColor: '#89b4fa',
+            caretColor: '#cc3333',
             whiteSpace: 'pre',
             overflowWrap: 'normal',
             tabSize: 4,

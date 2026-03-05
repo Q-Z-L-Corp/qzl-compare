@@ -433,7 +433,7 @@ export default function CompareApp() {
         />
       )}
 
-      <main className="flex-1 overflow-hidden flex flex-col bg-[#0f0f1f]">
+      <main className="flex-1 overflow-hidden flex flex-col bg-[#181d24]">
         {mode === 'text' ? (
           // ── Text compare layout: diff view with file paths and inline editors ──────
           <>

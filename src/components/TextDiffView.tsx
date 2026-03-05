@@ -88,7 +88,7 @@ export default function TextDiffView({ ops, onLeftChange, onRightChange }: TextD
           ${status === 'replace' ? 'bg-[rgba(227,179,65,0.08)] hover:bg-[rgba(227,179,65,0.12)]' : ''}
         `}>
           {/* Left side */}
-          <td className="py-0 px-0 w-12 text-center text-xs font-mono text-[#6c7086] bg-[#0f0f1f] border-r border-[#45475a] select-none">
+          <td className="py-0 px-0 w-12 text-center text-xs font-mono text-[#6b7280] bg-[#181d24] border-r border-[#4b5563] select-none">
             {status !== 'insert' ? idx + 1 : ''}
           </td>
           <td className={`py-1 px-3 font-mono text-[13px] leading-6 min-h-[26px]
@@ -99,7 +99,7 @@ export default function TextDiffView({ ops, onLeftChange, onRightChange }: TextD
               className={`block break-words text-left
                 ${status === 'delete' ? 'text-[#f85149]' : ''}
                 ${status === 'replace' ? 'text-[#e3b341]' : ''}
-                ${status === 'equal' ? 'text-[#cdd6f4]' : ''}
+                ${status === 'equal' ? 'text-[#e5e7eb]' : ''}
               `}
             >
               {leftLines[idx] || ' '}
@@ -107,7 +107,7 @@ export default function TextDiffView({ ops, onLeftChange, onRightChange }: TextD
           </td>
           
           {/* Gutter */}
-          <td className="py-1 px-2 w-16 text-center bg-[#0a0a12] border-x border-[#45475a]/30">
+          <td className="py-1 px-2 w-16 text-center bg-[#12161c] border-x border-[#4b5563]/30">
             {status === 'delete' && (
               <button
                 onClick={() => handleCopyToRight(idx)}
@@ -147,7 +147,7 @@ export default function TextDiffView({ ops, onLeftChange, onRightChange }: TextD
           </td>
 
           {/* Right side */}
-          <td className="py-0 px-0 w-12 text-center text-xs font-mono text-[#6c7086] bg-[#0f0f1f] border-r border-[#45475a] select-none">
+          <td className="py-0 px-0 w-12 text-center text-xs font-mono text-[#6b7280] bg-[#181d24] border-r border-[#4b5563] select-none">
             {status !== 'delete' ? idx + 1 : ''}
           </td>
           <td className={`py-1 px-3 font-mono text-[13px] leading-6 min-h-[26px]
@@ -158,7 +158,7 @@ export default function TextDiffView({ ops, onLeftChange, onRightChange }: TextD
               className={`block break-words text-left
                 ${status === 'insert' ? 'text-[#56d364]' : ''}
                 ${status === 'replace' ? 'text-[#e3b341]' : ''}
-                ${status === 'equal' ? 'text-[#cdd6f4]' : ''}
+                ${status === 'equal' ? 'text-[#e5e7eb]' : ''}
               `}
             >
               {rightLines[idx] || ' '}
@@ -172,9 +172,9 @@ export default function TextDiffView({ ops, onLeftChange, onRightChange }: TextD
   const diffCount = ops.filter(op => op.type !== 'equal').length;
 
   return (
-    <div className="flex flex-col h-full bg-[#0f0f1f]" ref={containerRef}>
+    <div className="flex flex-col h-full bg-[#181d24]" ref={containerRef}>
       {/* Toolbar */}
-      <div className="flex items-center gap-2 h-10 px-4 bg-[#0a0a12] border-b-2 border-[#45475a] shrink-0">
+      <div className="flex items-center gap-2 h-10 px-4 bg-[#12161c] border-b-2 border-[#4b5563] shrink-0">
         <button
           onClick={() => setShowContext(!showContext)}
           className={`btn btn-sm text-xs ${showContext ? 'btn-active' : ''}`}
@@ -189,7 +189,7 @@ export default function TextDiffView({ ops, onLeftChange, onRightChange }: TextD
         >
           Same
         </button>
-        <div className="ml-auto text-xs text-[#6c7086]">
+        <div className="ml-auto text-xs text-[#6b7280]">
           📊 {diffCount} difference{diffCount !== 1 ? 's' : ''}
         </div>
       </div>

@@ -13,7 +13,7 @@ const TOAST_DURATION = 3000;
 const bgColorMap = {
   success: 'border-[#2ea043] bg-[#1a3a1a] text-[#56d364]',
   error:   'border-[#f85149] bg-[#3a1a1a] text-[#f85149]',
-  info:    'border-[#45475a] bg-[#0a0a12] text-[#89b4fa]',
+  info:    'border-[#4b5563] bg-[#12161c] text-[#3b82f6]',
 };
 
 const iconMap = {
