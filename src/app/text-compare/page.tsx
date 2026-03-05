@@ -6,6 +6,7 @@ import type { DiffOp, ToastMessage } from '@/types';
 import { computeLineDiff } from '@/lib/diff';
 import { countLines } from '@/lib/formatters';
 import MenuBar, { type MenuDefinition } from '@/components/MenuBar';
+import ToolBtn from '@/components/ToolBtn';
 import Toast from '@/components/Toast';
 
 const TEXT_DIFF_DEBOUNCE_MS = 300;
@@ -21,6 +22,9 @@ export default function TextComparePage() {
   const textDiffTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [diffOps, setDiffOps] = useState<DiffOp[]>([]);
+  const [diffFilter, setDiffFilter] = useState<'all' | 'diffs' | 'same' | 'context'>('all');
+  const [showMinor, setShowMinor] = useState(true);
+  const [currentSection, setCurrentSection] = useState(0);
   const [statusMsg, setStatusMsg] = useState('Ready — paste or type text to compare');
   const [statusRight, setStatusRight] = useState('');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -33,16 +37,71 @@ export default function TextComparePage() {
   const rightLines = useMemo(() => countLines(rightText), [rightText]);
   const diffCount = useMemo(() => diffOps.filter(op => op.type !== 'equal').length, [diffOps]);
 
-  // Build line status maps from diff ops
+  // Minor diff detection
+  function isMinorDiff(op: DiffOp): boolean {
+    if (op.type === 'equal') return false;
+    if (op.type === 'replace') return (op.leftLine || '').replace(/\s/g, '') === (op.rightLine || '').replace(/\s/g, '');
+    if (op.type === 'insert') return (op.rightLine || '').trim() === '';
+    if (op.type === 'delete') return (op.leftLine || '').trim() === '';
+    return false;
+  }
+
+  // Filtered ops for highlighting
+  const filteredOps = useMemo(() => {
+    let ops = diffOps;
+    if (!showMinor) {
+      ops = ops.map(op => isMinorDiff(op) ? { ...op, type: 'equal' as const } : op);
+    }
+    return ops;
+  }, [diffOps, showMinor]);
+
+  // Diff sections (groups of consecutive non-equal ops)
+  const diffSections = useMemo(() => {
+    const sections: number[] = [];
+    let inSection = false;
+    for (let i = 0; i < filteredOps.length; i++) {
+      if (filteredOps[i].type !== 'equal') {
+        if (!inSection) { sections.push(i); inSection = true; }
+      } else {
+        inSection = false;
+      }
+    }
+    return sections;
+  }, [filteredOps]);
+
+  function navigateSection(direction: 1 | -1) {
+    if (diffSections.length === 0) return;
+    const next = direction === 1
+      ? Math.min(currentSection + 1, diffSections.length - 1)
+      : Math.max(currentSection - 1, 0);
+    setCurrentSection(next);
+    // Scroll to the line in the textarea
+    const opIdx = diffSections[next];
+    const lineNum = filteredOps[opIdx]?.leftNum ?? filteredOps[opIdx]?.rightNum ?? 0;
+    const scrollTop = (lineNum - 1) * LINE_HEIGHT;
+    // Try to scroll both panels
+    document.querySelectorAll('[data-text-panel] textarea').forEach(el => {
+      (el as HTMLTextAreaElement).scrollTop = scrollTop;
+    });
+  }
+
+  // Copy left text to right or vice versa
+  function copyText(from: 'left' | 'right', to: 'left' | 'right') {
+    const content = from === 'left' ? textRef.current.left : textRef.current.right;
+    handleTextChange(to, content);
+    addToast(`Copied ${from} → ${to}`, 'success');
+  }
+
+  // Build line status maps from diff ops (use filtered to respect minor toggle)
   const { leftLineStatus, rightLineStatus } = useMemo(() => {
     const leftMap = new Map<number, string>();
     const rightMap = new Map<number, string>();
-    for (const op of diffOps) {
+    for (const op of filteredOps) {
       if (op.leftNum !== undefined) leftMap.set(op.leftNum, op.type);
       if (op.rightNum !== undefined) rightMap.set(op.rightNum, op.type);
     }
     return { leftLineStatus: leftMap, rightLineStatus: rightMap };
-  }, [diffOps]);
+  }, [filteredOps]);
 
   // ── Toast helpers
   const addToast = useCallback((message: string, type: ToastMessage['type'] = 'info') => {
@@ -186,49 +245,46 @@ export default function TextComparePage() {
       {/* Menu bar */}
       <MenuBar menus={menus} />
 
-      {/* Toolbar */}
-      <div className="flex items-center gap-1 h-11 px-3 bg-[#12161c] border-b-2 border-[#4b5563] shrink-0 overflow-x-auto">
-        <button onClick={() => router.push('/')} className="btn btn-sm gap-1.5" title="Home">
-          🏠 <span className="hidden sm:inline text-[11px]">Home</span>
-        </button>
-        <div className="w-px h-7 bg-[#4b5563]/40" />
+      {/* Toolbar — Beyond Compare style */}
+      <div className="flex items-center gap-0.5 h-10 px-2 bg-[#1e242c] border-b-2 border-[#4b5563] shrink-0 overflow-x-auto">
+        {/* View filter group */}
+        <ToolBtn icon="✱" label="All" active={diffFilter === 'all'} onClick={() => setDiffFilter('all')} title="Show all lines" />
+        <ToolBtn icon="≠" label="Diffs" active={diffFilter === 'diffs'} onClick={() => setDiffFilter('diffs')} title="Highlight differences only" />
+        <ToolBtn icon="=" label="Same" active={diffFilter === 'same'} onClick={() => setDiffFilter('same')} title="Highlight same lines only" />
+        <ToolBtn icon="⊞" label="Context" active={diffFilter === 'context'} onClick={() => setDiffFilter('context')} title="Show differences with context" />
+        <ToolBtn icon="~" label="Minor" active={showMinor} onClick={() => setShowMinor(v => !v)} title="Toggle minor (whitespace-only) differences" />
+
+        <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+
+        {/* Copy */}
+        <ToolBtn icon="→" label="Copy" onClick={() => copyText('left', 'right')} disabled={!leftText} title="Copy left text to right" accent />
+        <ToolBtn icon="←" label="Copy" onClick={() => copyText('right', 'left')} disabled={!rightText} title="Copy right text to left" accent />
+
+        <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+
+        {/* Section navigation */}
+        <ToolBtn icon="↓" label="Next" onClick={() => navigateSection(1)} disabled={diffCount === 0} title="Next diff section" />
+        <ToolBtn icon="↑" label="Prev" onClick={() => navigateSection(-1)} disabled={diffCount === 0} title="Previous diff section" />
+
+        <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+
+        {/* Actions */}
+        <ToolBtn icon="⇄" label="Swap" onClick={handleSwap} disabled={!leftText && !rightText} title="Swap left and right" />
+        <ToolBtn icon="🗑" label="Clear" onClick={handleClear} title="Clear both sides" />
 
         {fsApiSupported && (
           <>
-            <button onClick={() => loadTextFromFile('left')} className="btn btn-sm" title="Load file into left panel">
-              📂 <span className="hidden sm:inline text-[11px]">Load Left</span>
-            </button>
-            <button onClick={() => loadTextFromFile('right')} className="btn btn-sm" title="Load file into right panel">
-              📂 <span className="hidden sm:inline text-[11px]">Load Right</span>
-            </button>
-            <div className="w-px h-7 bg-[#4b5563]/40" />
+            <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+            <ToolBtn icon="📂" label="Load L" onClick={() => loadTextFromFile('left')} title="Load file into left panel" />
+            <ToolBtn icon="📂" label="Load R" onClick={() => loadTextFromFile('right')} title="Load file into right panel" />
+            {leftText && <ToolBtn icon="💾" label="Save L" onClick={() => saveTextToFile('left')} title="Save left text to file" />}
+            {rightText && <ToolBtn icon="💾" label="Save R" onClick={() => saveTextToFile('right')} title="Save right text to file" />}
           </>
-        )}
-
-        <button onClick={handleSwap} className="btn btn-sm" title="Swap left and right" disabled={!leftText && !rightText}>
-          🔀 <span className="hidden sm:inline text-[11px]">Swap</span>
-        </button>
-        <button onClick={handleClear} className="btn btn-sm" title="Clear both sides">
-          🗑️ <span className="hidden sm:inline text-[11px]">Clear</span>
-        </button>
-
-        {fsApiSupported && leftText && (
-          <>
-            <div className="w-px h-7 bg-[#4b5563]/40" />
-            <button onClick={() => saveTextToFile('left')} className="btn btn-sm" title="Save left text to file">
-              💾 <span className="hidden sm:inline text-[11px]">Save Left</span>
-            </button>
-          </>
-        )}
-        {fsApiSupported && rightText && (
-          <button onClick={() => saveTextToFile('right')} className="btn btn-sm" title="Save right text to file">
-            💾 <span className="hidden sm:inline text-[11px]">Save Right</span>
-          </button>
         )}
 
         <div className="flex-1" />
-        <span className="text-xs text-[#6b7280]">
-          📊 {diffCount} diff{diffCount !== 1 ? 's' : ''} • {leftLines}/{rightLines} lines
+        <span className="text-[11px] text-[#6b7280] px-1 tabular-nums select-none whitespace-nowrap">
+          {diffCount} diff{diffCount !== 1 ? 's' : ''} • {diffSections.length} section{diffSections.length !== 1 ? 's' : ''} • {leftLines}/{rightLines} lines
         </span>
       </div>
 

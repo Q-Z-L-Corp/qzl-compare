@@ -9,6 +9,7 @@ import { listChildren, expandAllRecursive } from '@/lib/fsUtils';
 import FileDiffView, { FileDiffViewHandle } from '@/components/FileDiffView';
 import MenuBar, { type MenuDefinition } from '@/components/MenuBar';
 import LoadingView from '@/components/LoadingView';
+import ToolBtn from '@/components/ToolBtn';
 import Toast from '@/components/Toast';
 
 type ViewState = 'empty' | 'loading' | 'folder' | 'file-diff';
@@ -30,7 +31,11 @@ export default function FolderComparePage() {
   // Filter state
   const [filterConfig, setFilterConfig] = useState<FileFilterConfig>({ includePatterns: '', excludePatterns: '' });
   const [showFilterDialog, setShowFilterDialog] = useState(false);
+  const [showFilterBar, setShowFilterBar] = useState(false);
   const [filterStatusFilter, setFilterStatusFilter] = useState<'all' | 'different' | 'left-only' | 'right-only' | 'same'>('all');
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
+  const [filesOnlyMode, setFilesOnlyMode] = useState(false);
 
   // File drill-down state
   const [leftFile, setLeftFile] = useState<FileInfo | null>(null);
@@ -372,84 +377,111 @@ export default function FolderComparePage() {
       {/* Menu bar */}
       <MenuBar menus={menus} />
 
-      {/* Toolbar */}
-      <div className="flex items-center gap-1 h-11 px-3 bg-[#12161c] border-b-2 border-[#4b5563] shrink-0 overflow-x-auto">
-        <button onClick={() => router.push('/')} className="btn btn-sm gap-1.5" title="Home">
-          🏠 <span className="hidden sm:inline text-[11px]">Home</span>
-        </button>
-        <div className="w-px h-7 bg-[#4b5563]/40" />
-
+      {/* Toolbar — Beyond Compare style */}
+      <div className="flex items-center gap-0.5 h-10 px-2 bg-[#1e242c] border-b border-[#4b5563] shrink-0 overflow-x-auto">
         {view === 'file-diff' ? (
           <>
-            <button onClick={handleBackToFolder} className="btn btn-sm gap-1.5" title="Back to folder comparison">
-              📁 Back
-            </button>
-            <div className="w-px h-7 bg-[#4b5563]/40" />
-
-            {/* Diff navigation */}
+            <ToolBtn icon="📁" label="Back" onClick={handleBackToFolder} title="Back to folder comparison" />
+            <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
             {hasDiffs && (
               <>
-                <div className="flex items-center gap-0.5 bg-[#252d37] p-0.5 rounded-lg border border-[#4b5563]/50">
-                  <button onClick={goFirstDiff} className="btn btn-sm px-2" title="First difference">⏮</button>
-                  <button onClick={() => navigateDiff(-1)} className="btn btn-sm px-2" title="Previous difference (F7)">◀</button>
-                  <span className="text-xs text-[#9ca3af] px-2.5 py-1 bg-[#12161c] border border-[#4b5563]/50 rounded min-w-[60px] text-center tabular-nums select-none font-semibold">
-                    {currentDiff + 1}/{diffCount}
-                  </span>
-                  <button onClick={() => navigateDiff(+1)} className="btn btn-sm px-2" title="Next difference (F8)">▶</button>
-                  <button onClick={goLastDiff} className="btn btn-sm px-2" title="Last difference">⏭</button>
-                </div>
+                <ToolBtn icon="⏮" label="First" onClick={goFirstDiff} title="First difference" />
+                <ToolBtn icon="◀" label="Prev" onClick={() => navigateDiff(-1)} title="Previous difference (F7)" />
+                <span className="text-[11px] text-[#9ca3af] px-2 py-1 bg-[#12161c] border border-[#4b5563]/50 rounded tabular-nums select-none font-semibold">
+                  {currentDiff + 1}/{diffCount}
+                </span>
+                <ToolBtn icon="▶" label="Next" onClick={() => navigateDiff(+1)} title="Next difference (F8)" />
+                <ToolBtn icon="⏭" label="Last" onClick={goLastDiff} title="Last difference" />
               </>
             )}
           </>
         ) : (
           <>
-            {/* Status filter buttons */}
-            <button onClick={() => setFilterStatusFilter('all')} className={`btn btn-sm ${filterStatusFilter === 'all' ? 'btn-active' : ''}`} title="Show all">
-              ✱ <span className="hidden sm:inline text-[11px]">All</span>
-            </button>
-            <button onClick={() => setFilterStatusFilter('different')} className={`btn btn-sm ${filterStatusFilter === 'different' ? 'btn-active' : ''}`} title="Show differences">
-              ≠ <span className="hidden sm:inline text-[11px]">Diffs</span>
-            </button>
-            <button onClick={() => setFilterStatusFilter('same')} className={`btn btn-sm ${filterStatusFilter === 'same' ? 'btn-active' : ''}`} title="Show same">
-              = <span className="hidden sm:inline text-[11px]">Same</span>
-            </button>
-            <div className="w-px h-7 bg-[#4b5563]/40" />
+            {/* View filter group */}
+            <ToolBtn icon="✱" label="All" active={filterStatusFilter === 'all'} onClick={() => setFilterStatusFilter('all')} title="Show all entries" />
+            <ToolBtn icon="≠" label="Diffs" active={filterStatusFilter === 'different'} onClick={() => setFilterStatusFilter('different')} title="Show differences only" />
+            <ToolBtn icon="=" label="Same" active={filterStatusFilter === 'same'} onClick={() => setFilterStatusFilter('same')} title="Show matching entries" />
+
+            <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+
+            {/* Rules & Filters */}
+            <ToolBtn icon="📋" label="Rules" active={showFilterBar} onClick={() => setShowFilterBar(v => !v)} title="Toggle comparison rules & filters" />
+            <ToolBtn icon="🔍" label="Filters" active={!!(filterConfig.includePatterns || filterConfig.excludePatterns)} onClick={() => setShowFilterDialog(true)} title="File include/exclude filters" />
+
+            <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+
+            {/* Tree controls */}
+            <ToolBtn icon="⊞" label="Expand" onClick={() => { if (!expandAll) handleExpandAllToggle(); }} disabled={treeNodes.length === 0 || expandAll} title="Expand all folders" />
+            <ToolBtn icon="⊟" label="Collapse" onClick={() => { if (expandAll) handleExpandAllToggle(); else { setTreeNodes(prev => collapseAllNodes(prev)); addToast('Collapsed', 'info'); } }} disabled={treeNodes.length === 0} title="Collapse all folders" />
+            <ToolBtn icon="☑" label="Select" active={selectMode} onClick={() => { setSelectMode(v => !v); setSelectedNodes(new Set()); }} title="Toggle selection mode" />
+            <ToolBtn icon="📄" label="Files" active={filesOnlyMode} onClick={() => setFilesOnlyMode(v => !v)} title="Show files only (hide folders)" />
+
+            <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
 
             {/* Actions */}
-            <button onClick={handleExpandAllToggle} className={`btn btn-sm ${expandAll ? 'btn-active' : ''}`} title={expandAll ? 'Collapse all folders' : 'Expand all folders'} disabled={treeNodes.length === 0}>
-              {expandAll ? '📂' : '📁'} <span className="hidden sm:inline text-[11px]">{expandAll ? 'Collapse' : 'Expand'}</span>
-            </button>
-            <button onClick={handleRefresh} className="btn btn-sm" title="Refresh comparison (F5)" disabled={!leftDir || !rightDir}>
-              🔄 <span className="hidden sm:inline text-[11px]">Refresh</span>
-            </button>
-            <button onClick={() => setShowFilterDialog(true)} className={`btn btn-sm ${(filterConfig.includePatterns || filterConfig.excludePatterns) ? 'btn-active' : ''}`} title="File filters">
-              🔍 <span className="hidden sm:inline text-[11px]">Filters</span>
-            </button>
-            <button onClick={handleSwap} className="btn btn-sm" title="Swap sides" disabled={!leftDir && !rightDir}>
-              🔀 <span className="hidden sm:inline text-[11px]">Swap</span>
-            </button>
+            <ToolBtn icon="⇄" label="Swap" onClick={handleSwap} disabled={!leftDir && !rightDir} title="Swap left and right sides" />
+            <ToolBtn icon="↻" label="Refresh" onClick={handleRefresh} disabled={!leftDir || !rightDir} title="Refresh comparison (F5)" />
+
+            {view === 'folder' && (
+              <>
+                <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+                <span className="text-[11px] text-[#6b7280] px-1 tabular-nums select-none whitespace-nowrap">
+                  {treeStats.total} files • {treeStats.different} diffs • {treeStats.leftOnly} L • {treeStats.rightOnly} R
+                </span>
+              </>
+            )}
           </>
         )}
         <div className="flex-1" />
-        {view === 'folder' && (
-          <span className="text-xs text-[#6b7280]">
-            {treeStats.total} files • {treeStats.different} diffs • {treeStats.leftOnly} left • {treeStats.rightOnly} right
-          </span>
-        )}
       </div>
 
+      {/* Filter bar (inline rules panel) */}
+      {showFilterBar && view === 'folder' && (
+        <div className="flex items-center gap-3 px-3 py-1.5 bg-[#252d37] border-b border-[#4b5563] shrink-0 text-xs">
+          <span className="text-[#9ca3af] whitespace-nowrap">Filters:</span>
+          <input
+            type="text"
+            value={filterConfig.includePatterns}
+            onChange={e => setFilterConfig(prev => ({ ...prev, includePatterns: e.target.value }))}
+            placeholder="Include: *.ts, *.tsx"
+            className="flex-1 min-w-0 h-6 px-2 text-[12px] font-mono bg-[#12161c] text-[#e5e7eb] border border-[#4b5563]/60 rounded outline-none focus:border-[#cc3333]/60 placeholder:text-[#4b5563]"
+          />
+          <input
+            type="text"
+            value={filterConfig.excludePatterns}
+            onChange={e => setFilterConfig(prev => ({ ...prev, excludePatterns: e.target.value }))}
+            placeholder="Exclude: *.log, node_modules"
+            className="flex-1 min-w-0 h-6 px-2 text-[12px] font-mono bg-[#12161c] text-[#e5e7eb] border border-[#4b5563]/60 rounded outline-none focus:border-[#cc3333]/60 placeholder:text-[#4b5563]"
+          />
+          <button
+            onClick={() => { if (leftDir && rightDir) runFolderScan(leftDir, rightDir); addToast('Filters applied', 'info'); }}
+            className="px-2 py-0.5 bg-[#cc3333] text-white rounded text-[11px] hover:bg-[#b52d2d] transition-colors"
+          >
+            Apply
+          </button>
+          {(filterConfig.includePatterns || filterConfig.excludePatterns) && (
+            <button
+              onClick={() => applyFilters({ includePatterns: '', excludePatterns: '' })}
+              className="text-[#f85149] hover:text-[#ff6b6b] text-[11px]"
+            >
+              ✕ Clear
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Active filter banner */}
-      {(filterConfig.includePatterns || filterConfig.excludePatterns) && view === 'folder' && (
-        <div className="flex items-center gap-2 px-4 py-1.5 bg-[#1e242c] border-b border-[#3b82f6]/30 text-xs text-[#3b82f6] shrink-0">
-          <span>🔍 Filters active:</span>
-          {filterConfig.includePatterns && <span className="font-mono bg-[#12161c] px-1.5 py-0.5 rounded">include: {filterConfig.includePatterns}</span>}
-          {filterConfig.excludePatterns && <span className="font-mono bg-[#12161c] px-1.5 py-0.5 rounded">exclude: {filterConfig.excludePatterns}</span>}
-          <button onClick={() => applyFilters({ includePatterns: '', excludePatterns: '' })} className="ml-auto text-[#f85149] hover:text-[#ff6b6b]">✕ Clear</button>
+      {(filterConfig.includePatterns || filterConfig.excludePatterns) && !showFilterBar && view === 'folder' && (
+        <div className="flex items-center gap-2 px-4 py-1 bg-[#1e242c] border-b border-[#3b82f6]/30 text-xs text-[#3b82f6] shrink-0">
+          <span>🔍 Filters:</span>
+          {filterConfig.includePatterns && <span className="font-mono bg-[#12161c] px-1.5 py-0.5 rounded">+{filterConfig.includePatterns}</span>}
+          {filterConfig.excludePatterns && <span className="font-mono bg-[#12161c] px-1.5 py-0.5 rounded">-{filterConfig.excludePatterns}</span>}
+          <button onClick={() => applyFilters({ includePatterns: '', excludePatterns: '' })} className="ml-auto text-[#f85149] hover:text-[#ff6b6b]">✕</button>
         </div>
       )}
 
       {/* Panel path bars */}
-      <div className="grid shrink-0 bg-[#181d24] border-b-2 border-[#4b5563]"
+      <div className="grid shrink-0 bg-[#181d24]"
            style={{ gridTemplateColumns: '1fr 3px 1fr' }}>
         <PathBar
           path={view === 'file-diff' ? (leftFile?.name ?? '') : (leftDir?.name ?? '')}
@@ -497,6 +529,10 @@ export default function FolderComparePage() {
             onExpand={handleExpandNode}
             onCompare={compareFolderFile}
             onCopy={copyFolderFile}
+            selectMode={selectMode}
+            selectedNodes={selectedNodes}
+            onToggleSelect={(path) => setSelectedNodes(prev => { const next = new Set(prev); if (next.has(path)) next.delete(path); else next.add(path); return next; })}
+            filesOnlyMode={filesOnlyMode}
           />
         )}
         {view === 'file-diff' && (
@@ -620,20 +656,33 @@ const ROW_BG: Record<string, string> = {
   'right-only': 'bg-[rgba(86,211,100,0.07)] hover:bg-[rgba(86,211,100,0.13)]',
 };
 
-function FolderTreeView({ nodes, statusFilter, ignoredDirNames, onExpand, onCompare, onCopy }: {
+function FolderTreeView({ nodes, statusFilter, ignoredDirNames, onExpand, onCompare, onCopy, selectMode, selectedNodes, onToggleSelect, filesOnlyMode }: {
   nodes: FolderTreeNode[];
   statusFilter: string;
   ignoredDirNames: string[];
   onExpand: (path: string) => void;
   onCompare: (node: FolderTreeNode) => void;
   onCopy: (node: FolderTreeNode, from: 'left' | 'right', to: 'left' | 'right') => void;
+  selectMode: boolean;
+  selectedNodes: Set<string>;
+  onToggleSelect: (path: string) => void;
+  filesOnlyMode: boolean;
 }) {
   function filterNodes(nodes: FolderTreeNode[]): FolderTreeNode[] {
-    if (statusFilter === 'all') return nodes;
-    return nodes.filter(n => {
-      if (n.isDirectory) return true; // Always show dirs
-      return n.status === statusFilter;
-    }).map(n => n.isDirectory ? { ...n, children: filterNodes(n.children) } : n);
+    let result = nodes;
+    if (filesOnlyMode) {
+      result = result.filter(n => !n.isDirectory);
+    }
+    if (statusFilter !== 'all') {
+      result = result.filter(n => {
+        if (n.isDirectory) return !filesOnlyMode;
+        return n.status === statusFilter;
+      });
+    }
+    if (!filesOnlyMode) {
+      result = result.map(n => n.isDirectory ? { ...n, children: filterNodes(n.children) } : n);
+    }
+    return result;
   }
 
   const filtered = filterNodes(nodes);
@@ -642,7 +691,8 @@ function FolderTreeView({ nodes, statusFilter, ignoredDirNames, onExpand, onComp
     const result: React.ReactNode[] = [];
     for (const node of nodes) {
       result.push(
-        <TreeRow key={node.path} node={node} onExpand={onExpand} onCompare={onCompare} onCopy={onCopy} />
+        <TreeRow key={node.path} node={node} onExpand={onExpand} onCompare={onCompare} onCopy={onCopy}
+          selectMode={selectMode} selected={selectedNodes.has(node.path)} onToggleSelect={onToggleSelect} />
       );
       if (node.isDirectory && node.expanded && node.children.length > 0) {
         result.push(...renderNodes(node.children));
@@ -661,12 +711,13 @@ function FolderTreeView({ nodes, statusFilter, ignoredDirNames, onExpand, onComp
       )}
 
       {/* Table header */}
-      <div className="flex items-center px-4 py-2 bg-[#12161c] border-b border-[#4b5563] text-xs font-semibold text-[#3b82f6] shrink-0">
-        <div className="flex-1 min-w-0">Name</div>
+      <div className="flex items-center px-4 py-1.5 bg-[#12161c] border-b border-[#4b5563] text-[11px] font-semibold text-[#3b82f6] shrink-0">
+        {selectMode && <div className="w-6 shrink-0" />}
+        <div className="flex-1 min-w-0">Name ▴</div>
         <div className="w-14 text-center">Status</div>
-        <div className="w-20 text-right">Left</div>
-        <div className="w-20 text-right">Right</div>
-        <div className="w-20 text-right">Actions</div>
+        <div className="w-16 text-right">Size</div>
+        <div className="w-28 text-right">Modified</div>
+        <div className="w-16 text-right">Actions</div>
       </div>
 
       {/* Tree items */}
@@ -686,24 +737,35 @@ function FolderTreeView({ nodes, statusFilter, ignoredDirNames, onExpand, onComp
   );
 }
 
-function TreeRow({ node, onExpand, onCompare, onCopy }: {
+function TreeRow({ node, onExpand, onCompare, onCopy, selectMode, selected, onToggleSelect }: {
   node: FolderTreeNode;
   onExpand: (path: string) => void;
   onCompare: (node: FolderTreeNode) => void;
   onCopy: (node: FolderTreeNode, from: 'left' | 'right', to: 'left' | 'right') => void;
+  selectMode: boolean;
+  selected: boolean;
+  onToggleSelect: (path: string) => void;
 }) {
   const meta = STATUS_META[node.status] ?? STATUS_META.same;
   const indent = node.depth * 20;
 
   return (
-    <div className={`flex items-center px-4 py-1.5 border-b border-[#2a2a3a] transition-colors ${ROW_BG[node.status] ?? ''}`}>
+    <div className={`flex items-center px-4 py-1 border-b border-[#2a2a3a] transition-colors ${ROW_BG[node.status] ?? ''} ${selected ? 'ring-1 ring-inset ring-[#cc3333]/50 bg-[#cc3333]/10' : ''}`}>
+      {/* Checkbox (select mode) */}
+      {selectMode && (
+        <div className="w-6 shrink-0 flex items-center justify-center">
+          {!node.isDirectory && (
+            <input type="checkbox" checked={selected} onChange={() => onToggleSelect(node.path)} className="accent-[#cc3333] cursor-pointer" />
+          )}
+        </div>
+      )}
       {/* Name with indent */}
       <div className="flex-1 min-w-0 flex items-center gap-1.5" style={{ paddingLeft: indent }}>
         {node.isDirectory ? (
           <button onClick={() => onExpand(node.path)} className="flex items-center gap-1 hover:text-[#cc3333] transition-colors min-w-0">
             <span className="text-[10px] text-[#6b7280] w-3 shrink-0">{node.expanded ? '▾' : '▸'}</span>
             <span className="shrink-0">📁</span>
-            <span className="truncate text-sm text-[#e5e7eb] font-medium">{node.name}</span>
+            <span className="truncate text-[13px] text-[#e5e7eb] font-medium">{node.name}</span>
           </button>
         ) : (
           <button
@@ -711,8 +773,8 @@ function TreeRow({ node, onExpand, onCompare, onCopy }: {
             className="flex items-center gap-1 hover:text-[#cc3333] transition-colors min-w-0"
           >
             <span className="w-3 shrink-0" />
-            <span className="shrink-0 text-base opacity-90">{getFileIcon(node.name)}</span>
-            <span className="truncate text-sm text-[#e5e7eb] font-medium">{node.name}</span>
+            <span className="shrink-0 text-sm opacity-90">{getFileIcon(node.name)}</span>
+            <span className="truncate text-[13px] text-[#e5e7eb] font-medium">{node.name}</span>
           </button>
         )}
       </div>
@@ -724,33 +786,37 @@ function TreeRow({ node, onExpand, onCompare, onCopy }: {
         )}
       </div>
 
-      {/* Left size */}
-      <div className="w-20 text-right text-xs text-[#9ca3af]">
-        {!node.isDirectory && node.leftSize !== undefined ? formatSize(node.leftSize) : ''}
+      {/* Size (shows left or right, whichever is present) */}
+      <div className="w-16 text-right text-[11px] text-[#9ca3af] tabular-nums">
+        {!node.isDirectory && (node.leftSize !== undefined ? formatSize(node.leftSize) : node.rightSize !== undefined ? formatSize(node.rightSize) : '')}
       </div>
 
-      {/* Right size */}
-      <div className="w-20 text-right text-xs text-[#9ca3af]">
-        {!node.isDirectory && node.rightSize !== undefined ? formatSize(node.rightSize) : ''}
+      {/* Modified date (shows left or right) */}
+      <div className="w-28 text-right text-[11px] text-[#6b7280] tabular-nums">
+        {!node.isDirectory && (
+          node.leftDate ? node.leftDate.toLocaleDateString() + ' ' + node.leftDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          : node.rightDate ? node.rightDate.toLocaleDateString() + ' ' + node.rightDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          : ''
+        )}
       </div>
 
       {/* Actions */}
-      <div className="w-20 text-right flex items-center justify-end gap-1">
+      <div className="w-16 text-right flex items-center justify-end gap-0.5">
         {!node.isDirectory && (
           <>
             {node.leftHandle && node.rightHandle && node.status === 'different' && (
-              <button onClick={() => onCompare(node)} className="px-1.5 py-1 text-xs bg-[#374151] text-[#3b82f6] hover:bg-[#4b5563] rounded" title="Compare files">
+              <button onClick={() => onCompare(node)} className="px-1 py-0.5 text-[10px] bg-[#374151] text-[#3b82f6] hover:bg-[#4b5563] rounded" title="Compare">
                 🔍
               </button>
             )}
             {node.status !== 'same' && node.leftHandle && (
-              <button onClick={() => onCopy(node, 'left', 'right')} className="px-1.5 py-1 text-xs bg-[#374151] text-[#56d364] hover:bg-[#2a4a2a] rounded" title="Copy left → right">
-                ➜
+              <button onClick={() => onCopy(node, 'left', 'right')} className="px-1 py-0.5 text-[10px] bg-[#374151] text-[#56d364] hover:bg-[#2a4a2a] rounded" title="Copy left → right">
+                →
               </button>
             )}
             {node.status !== 'same' && node.rightHandle && (
-              <button onClick={() => onCopy(node, 'right', 'left')} className="px-1.5 py-1 text-xs bg-[#374151] text-[#56d364] hover:bg-[#2a4a2a] rounded" title="Copy right ← left">
-                ⬅
+              <button onClick={() => onCopy(node, 'right', 'left')} className="px-1 py-0.5 text-[10px] bg-[#374151] text-[#56d364] hover:bg-[#2a4a2a] rounded" title="Copy right ← left">
+                ←
               </button>
             )}
           </>
@@ -760,16 +826,31 @@ function TreeRow({ node, onExpand, onCompare, onCopy }: {
   );
 }
 
+function collapseAllNodes(nodes: FolderTreeNode[]): FolderTreeNode[] {
+  return nodes.map(n => n.isDirectory ? { ...n, expanded: false, children: collapseAllNodes(n.children) } : n);
+}
+
 function PathBar({ path, onOpen, fsApiSupported, isFile }: { path: string; onOpen: () => void; fsApiSupported: boolean; isFile?: boolean }) {
   return (
-    <div className="flex items-center gap-2 h-10 px-3 bg-[#252d37] overflow-hidden">
-      {!isFile && fsApiSupported && (
-        <button onClick={onOpen} className="btn btn-sm shrink-0 text-[11px]">📂</button>
-      )}
-      <div className="flex items-center gap-2 flex-1 min-w-0">
-        <span className="text-sm truncate text-[#e5e7eb] font-mono" title={path}>
-          {path || (isFile ? '' : 'No folder selected')}
-        </span>
+    <div className="flex flex-col bg-[#1e242c] overflow-hidden">
+      <div className="flex items-center gap-1 px-2 py-1">
+        <input
+          type="text"
+          readOnly
+          value={path}
+          placeholder={isFile ? '' : 'Select folder…'}
+          title={path || (isFile ? '' : 'Select folder')}
+          className="flex-1 min-w-0 h-7 px-2 text-[13px] font-mono bg-[#12161c] text-[#e5e7eb] border border-[#4b5563]/60 rounded
+                     placeholder:text-[#4b5563] truncate outline-none focus:border-[#cc3333]/60
+                     cursor-default"
+        />
+        {!isFile && fsApiSupported && (
+          <button onClick={onOpen} className="shrink-0 w-7 h-7 flex items-center justify-center rounded
+                   bg-[#252d37] border border-[#4b5563]/50 text-[#9ca3af] hover:text-[#e5e7eb] hover:bg-[#374151]
+                   transition-colors" title="Browse for folder">
+            📂
+          </button>
+        )}
       </div>
     </div>
   );

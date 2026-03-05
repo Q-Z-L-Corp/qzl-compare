@@ -24,6 +24,7 @@ export interface FileInfo {
   content: string;
   name: string;
   size: number;
+  lastModified?: number;
 }
 
 export interface DirInfo {
