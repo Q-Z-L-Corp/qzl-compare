@@ -320,8 +320,8 @@ export default function FileComparePage() {
       label: 'Session',
       items: [
         { label: 'New File Compare', action: () => { setLeftFile(null); setRightFile(null); setDiffOps([]); setView('empty'); setStatusMsg('Ready — select two files to compare'); } },
-        { label: 'New Folder Compare', action: () => router.push('/folder-compare') },
-        { label: 'New Text Compare', action: () => router.push('/text-compare') },
+        { label: 'New Folder Compare', action: () => router.push('/folders') },
+        { label: 'New Text Compare', action: () => router.push('/text') },
         { separator: true },
         { label: 'Home', action: () => router.push('/'), shortcut: 'Alt+Home' },
         { separator: true },
@@ -369,7 +369,7 @@ export default function FileComparePage() {
     {
       label: 'Help',
       items: [
-        { label: 'Keyboard Shortcuts', action: () => addToast('F7: Prev diff • F8: Next diff • Ctrl+Home/End: First/Last • Ctrl+L/R: Copy', 'info') },
+        { label: 'Keyboard Shortcuts', action: () => addToast('F7: Prev diff • F8: Next diff • Ctrl+Home/End: First/Last • Ctrl+L/R: Copy all • Alt+→/←: Copy diff line at cursor', 'info') },
         { separator: true },
         { label: 'About QZL Compare', action: () => setShowAbout(true) },
       ],

@@ -11,19 +11,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1,
     },
     {
-      url: `${BASE_URL}/file-compare`,
+      url: `${BASE_URL}/files`,
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 0.9,
     },
     {
-      url: `${BASE_URL}/folder-compare`,
+      url: `${BASE_URL}/folders`,
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 0.9,
     },
     {
-      url: `${BASE_URL}/text-compare`,
+      url: `${BASE_URL}/text`,
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 0.9,

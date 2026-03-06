@@ -17,29 +17,29 @@ type SessionType = {
 
 const SESSION_TYPES: SessionType[] = [
   {
-    id: 'folder-compare',
+    id: "folders",
     name: 'Folder Compare',
     icon: '📁',
     description: 'Compare the contents of two folders side by side. Identifies files that are different, added, or removed between directories.',
-    href: '/folder-compare',
+    href: '/folders',
     color: '#cc3333',
     keywords: ['folder', 'directory', 'dir', 'tree'],
   },
   {
-    id: 'file-compare',
+    id: "files",
     name: 'File Compare',
     icon: '📄',
     description: 'Compare two individual files with line-by-line diff highlighting, inline character-level changes, and file sync capabilities.',
-    href: '/file-compare',
+    href: '/files',
     color: '#3b82f6',
     keywords: ['file', 'diff', 'merge', 'sync'],
   },
   {
-    id: 'text-compare',
+    id: "text",
     name: 'Text Compare',
     icon: '📝',
     description: 'Paste or type text directly into two editors and see differences highlighted in real-time. No file system access required.',
-    href: '/text-compare',
+    href: '/text',
     color: '#2ea043',
     keywords: ['text', 'paste', 'clipboard', 'string'],
   },
@@ -68,9 +68,9 @@ export default function HomePage() {
     {
       label: 'Session',
       items: [
-        { label: 'New File Compare', action: () => router.push('/file-compare') },
-        { label: 'New Folder Compare', action: () => router.push('/folder-compare') },
-        { label: 'New Text Compare', action: () => router.push('/text-compare') },
+        { label: 'New File Compare', action: () => router.push('/files') },
+        { label: 'New Folder Compare', action: () => router.push('/folders') },
+        { label: 'New Text Compare', action: () => router.push('/text') },
         { separator: true },
         { label: 'Close Tab', action: () => window.close() },
       ],
@@ -78,9 +78,9 @@ export default function HomePage() {
     {
       label: 'View',
       items: [
-        { label: 'Folder Compare', action: () => setSelected('folder-compare') },
-        { label: 'File Compare', action: () => setSelected('file-compare') },
-        { label: 'Text Compare', action: () => setSelected('text-compare') },
+        { label: 'Folder Compare', action: () => setSelected("folders") },
+        { label: 'File Compare', action: () => setSelected("files") },
+        { label: 'Text Compare', action: () => setSelected("text") },
         { separator: true },
         { label: 'Clear Selection', action: () => setSelected(null), disabled: !selected },
       ],

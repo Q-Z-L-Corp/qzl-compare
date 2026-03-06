@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Background -->
+  <rect width="32" height="32" rx="7" fill="#12161c"/>
+
+  <!-- Left panel (file A) -->
+  <rect x="2" y="3" width="12" height="26" rx="2.5" fill="#1e242c"/>
+  <rect x="2" y="3" width="12" height="26" rx="2.5" fill="none" stroke="#cc3333" stroke-width="0.9" stroke-opacity="0.75"/>
+
+  <!-- Left diff lines: red = changed, gray = context -->
+  <rect x="4"  y="7"  width="8" height="1.8" rx="0.9" fill="#cc3333" fill-opacity="0.95"/>
+  <rect x="4"  y="11" width="6" height="1.8" rx="0.9" fill="#4b5563" fill-opacity="0.7"/>
+  <rect x="4"  y="15" width="7" height="1.8" rx="0.9" fill="#cc3333" fill-opacity="0.75"/>
+  <rect x="4"  y="19" width="5" height="1.8" rx="0.9" fill="#4b5563" fill-opacity="0.55"/>
+  <rect x="4"  y="23" width="7" height="1.8" rx="0.9" fill="#cc3333" fill-opacity="0.85"/>
+
+  <!-- Right panel (file B) -->
+  <rect x="18" y="3" width="12" height="26" rx="2.5" fill="#1e242c"/>
+  <rect x="18" y="3" width="12" height="26" rx="2.5" fill="none" stroke="#3b82f6" stroke-width="0.9" stroke-opacity="0.75"/>
+
+  <!-- Right diff lines: green = added, gray = context -->
+  <rect x="20" y="7"  width="8" height="1.8" rx="0.9" fill="#2ea043" fill-opacity="0.95"/>
+  <rect x="20" y="11" width="6" height="1.8" rx="0.9" fill="#4b5563" fill-opacity="0.7"/>
+  <rect x="20" y="15" width="7" height="1.8" rx="0.9" fill="#3b82f6" fill-opacity="0.8"/>
+  <rect x="20" y="19" width="5" height="1.8" rx="0.9" fill="#4b5563" fill-opacity="0.55"/>
+  <rect x="20" y="23" width="8" height="1.8" rx="0.9" fill="#2ea043" fill-opacity="0.85"/>
+
+  <!-- Center divider arrows pointing inward -->
+  <polygon points="14.5,16 16,14 16,18" fill="#6b7280" fill-opacity="0.7"/>
+  <polygon points="17.5,16 16,14 16,18" fill="#6b7280" fill-opacity="0.7"/>
+</svg>

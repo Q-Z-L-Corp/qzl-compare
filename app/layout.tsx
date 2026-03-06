@@ -60,7 +60,17 @@ export const metadata: Metadata = {
       'Compare files, folders, and text online for free. Instant side-by-side diff, no install required.',
     images: ['/og-image.png'],
   },
-  icons: { icon: '/favicon.ico' },
+  icons: {
+    icon: [
+      // favicon.ico is auto-detected from src/app/favicon.ico (fallback for old browsers)
+      { url: '/icon.svg', type: 'image/svg+xml' },       // modern browsers prefer SVG
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
 };
 
 const jsonLd = {

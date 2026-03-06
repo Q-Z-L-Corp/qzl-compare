@@ -356,8 +356,8 @@ export default function FolderComparePage() {
       label: 'Session',
       items: [
         { label: 'New Folder Compare', action: () => { setLeftDir(null); setRightDir(null); setTreeNodes([]); setView('empty'); } },
-        { label: 'New File Compare', action: () => router.push('/file-compare') },
-        { label: 'New Text Compare', action: () => router.push('/text-compare') },
+        { label: 'New File Compare', action: () => router.push('/files') },
+        { label: 'New Text Compare', action: () => router.push('/text') },
         { separator: true },
         { label: 'Home', action: () => router.push('/') },
         { separator: true },
