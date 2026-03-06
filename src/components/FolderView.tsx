@@ -194,9 +194,20 @@ export default function FolderView({
 function FolderItemRow({ item, onCompare, onCopyFile }: { item: FolderItem; onCompare: (path: string) => void; onCopyFile: (path: string, from: 'left' | 'right', to: 'left' | 'right') => void }) {
   const meta = STATUS_META[item.status];
   const fileName = item.path.split('/').pop() ?? '';
+  
+  // Allow clicking the row to compare if both files exist
+  const canCompare = item.leftHandle && item.rightHandle;
+  const handleRowClick = () => {
+    if (canCompare) {
+      onCompare(item.path);
+    }
+  };
 
   return (
-    <div className={`flex items-center px-4 py-2 border-b border-[#2f3842] transition-colors ${ROW_BG[item.status]}`}>
+    <div 
+      className={`flex items-center px-4 py-2 border-b border-[#2f3842] transition-colors ${ROW_BG[item.status]} ${canCompare ? 'cursor-pointer' : ''}`}
+      onClick={handleRowClick}
+    >
       {/* File name */}
       <div className="flex-1 min-w-0 flex items-center gap-2">
         <span className="shrink-0 text-base opacity-90">{getFileIcon(item.path)}</span>
@@ -225,7 +236,10 @@ function FolderItemRow({ item, onCompare, onCopyFile }: { item: FolderItem; onCo
       {/* Actions */}
       <div className="w-24 text-right flex items-center justify-end gap-1">
         <button
-          onClick={() => onCompare(item.path)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onCompare(item.path);
+          }}
           className="px-2 py-1 text-xs bg-[#374151] text-[#cc3333] hover:bg-[#4b5563] rounded transition-colors"
           title="Compare files"
         >
@@ -235,7 +249,10 @@ function FolderItemRow({ item, onCompare, onCopyFile }: { item: FolderItem; onCo
           <>
             {item.leftHandle && (
               <button
-                onClick={() => onCopyFile(item.path, 'left', 'right')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCopyFile(item.path, 'left', 'right');
+                }}
                 className="px-2 py-1 text-xs bg-[#374151] text-[#56d364] hover:bg-[#2a4a2a] rounded transition-colors"
                 title="Copy left → right"
               >
@@ -244,7 +261,10 @@ function FolderItemRow({ item, onCompare, onCopyFile }: { item: FolderItem; onCo
             )}
             {item.rightHandle && (
               <button
-                onClick={() => onCopyFile(item.path, 'right', 'left')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCopyFile(item.path, 'right', 'left');
+                }}
                 className="px-2 py-1 text-xs bg-[#374151] text-[#56d364] hover:bg-[#2a4a2a] rounded transition-colors"
                 title="Copy right ← left"
               >

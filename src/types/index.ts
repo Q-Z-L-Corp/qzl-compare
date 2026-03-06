@@ -24,6 +24,7 @@ export interface FileInfo {
   content: string;
   name: string;
   size: number;
+  lastModified?: number;
 }
 
 export interface DirInfo {
@@ -61,4 +62,28 @@ export interface ComparisonOptions {
   caseSensitive: boolean;
   ignoreLineEndings: boolean;
   showLineNumbers: boolean;
+}
+
+// ── Folder tree types ─────────────────────────────────────────────────────
+
+export interface FolderTreeNode {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  status: FolderItemStatus;
+  leftHandle?: FileSystemFileHandle | FileSystemDirectoryHandle;
+  rightHandle?: FileSystemFileHandle | FileSystemDirectoryHandle;
+  leftSize?: number;
+  rightSize?: number;
+  leftDate?: Date;
+  rightDate?: Date;
+  children: FolderTreeNode[];
+  expanded: boolean;
+  loaded: boolean;
+  depth: number;
+}
+
+export interface FileFilterConfig {
+  includePatterns: string;
+  excludePatterns: string;
 }

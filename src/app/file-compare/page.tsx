@@ -1,19 +1,24 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
-import Link from 'next/link';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import type { FileInfo, DiffOp, ToastMessage, ComparisonOptions } from '@/types';
 import { computeLineDiff } from '@/lib/diff';
 import { countLines, formatSize } from '@/lib/formatters';
 import FileDiffView, { FileDiffViewHandle } from '@/components/FileDiffView';
+import TextCompareView from '@/components/TextCompareView';
+import MenuBar, { type MenuDefinition } from '@/components/MenuBar';
 import LoadingView from '@/components/LoadingView';
+import ToolBtn from '@/components/ToolBtn';
 import Toast from '@/components/Toast';
 
 type ViewState = 'empty' | 'loading' | 'diff';
+type DiffFilter = 'all' | 'diffs' | 'same' | 'context';
 
 let toastId = 0;
 
 export default function FileComparePage() {
+  const router = useRouter();
   const [view, setView] = useState<ViewState>('empty');
 
   const [leftFile, setLeftFile] = useState<FileInfo | null>(null);
@@ -22,6 +27,9 @@ export default function FileComparePage() {
   const [diffOps, setDiffOps] = useState<DiffOp[]>([]);
   const [diffCount, setDiffCount] = useState(0);
   const [currentDiff, setCurrentDiff] = useState(-1);
+  const [diffFilter, setDiffFilter] = useState<DiffFilter>('all');
+  const [showMinor, setShowMinor] = useState(true);
+  const [useTextCompareView, setUseTextCompareView] = useState(true);
   const [comparisonOptions, setComparisonOptions] = useState<ComparisonOptions>({
     ignoreWhitespace: 'none',
     caseSensitive: true,
@@ -33,13 +41,48 @@ export default function FileComparePage() {
   const [statusRight, setStatusRight] = useState('');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [showOptions, setShowOptions] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
 
   const [fsApiSupported, setFsApiSupported] = useState(false);
   useEffect(() => { setFsApiSupported('showOpenFilePicker' in window); }, []);
 
   const fileDiffRef = useRef<FileDiffViewHandle>(null);
 
-  // ── Toast helpers
+  // ── Minor diff detection ────────────────────────────────────────────────
+  function isMinorDiff(op: DiffOp): boolean {
+    if (op.type === 'equal') return false;
+    if (op.type === 'replace') {
+      return (op.leftLine || '').replace(/\s/g, '') === (op.rightLine || '').replace(/\s/g, '');
+    }
+    if (op.type === 'insert') return (op.rightLine || '').trim() === '';
+    if (op.type === 'delete') return (op.leftLine || '').trim() === '';
+    return false;
+  }
+
+  // ── Filtered ops for diff view ──────────────────────────────────────────
+  const filteredOps = useMemo(() => {
+    let ops = diffOps;
+    // Hide minor diffs when toggle is off
+    if (!showMinor) {
+      ops = ops.map(op => isMinorDiff(op) ? { ...op, type: 'equal' as const, leftLine: op.leftLine || op.rightLine, rightLine: op.rightLine || op.leftLine } : op);
+    }
+    if (diffFilter === 'all') return ops;
+    if (diffFilter === 'diffs') return ops.filter(op => op.type !== 'equal');
+    if (diffFilter === 'same') return ops.filter(op => op.type === 'equal');
+    // 'context': show diffs + 3 lines of context around them
+    const contextLines = 3;
+    const keep = new Set<number>();
+    ops.forEach((op, i) => {
+      if (op.type !== 'equal') {
+        for (let j = Math.max(0, i - contextLines); j <= Math.min(ops.length - 1, i + contextLines); j++) {
+          keep.add(j);
+        }
+      }
+    });
+    return ops.filter((_, i) => keep.has(i));
+  }, [diffOps, diffFilter, showMinor]);
+
+  // ── Toast helpers ─────────────────────────────────────────────────────────
   const addToast = useCallback((message: string, type: ToastMessage['type'] = 'info') => {
     setToasts(prev => [...prev, { id: ++toastId, message, type }]);
   }, []);
@@ -47,7 +90,7 @@ export default function FileComparePage() {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  // ── Diff navigation
+  // ── Diff navigation ───────────────────────────────────────────────────────
   const navigateDiff = useCallback((direction: 1 | -1) => {
     if (diffCount === 0) return;
     setCurrentDiff(prev => {
@@ -62,26 +105,59 @@ export default function FileComparePage() {
   const goFirstDiff = useCallback(() => { if (diffCount === 0) return; setCurrentDiff(0); fileDiffRef.current?.scrollToDiff(0); }, [diffCount]);
   const goLastDiff = useCallback(() => { if (diffCount === 0) return; const l = diffCount - 1; setCurrentDiff(l); fileDiffRef.current?.scrollToDiff(l); }, [diffCount]);
 
-  // ── Keyboard shortcuts
+  // ── Section navigation (groups of consecutive non-equal ops) ─────────────
+  const diffSections = useMemo(() => {
+    const sections: number[] = []; // index of first non-equal diff in each section
+    let diffIdx = 0;
+    let inSection = false;
+    for (const op of filteredOps) {
+      if (op.type !== 'equal') {
+        if (!inSection) { sections.push(diffIdx); inSection = true; }
+        diffIdx++;
+      } else {
+        inSection = false;
+      }
+    }
+    return sections;
+  }, [filteredOps]);
+
+  const navigateSection = useCallback((direction: 1 | -1) => {
+    if (diffSections.length === 0) return;
+    // Find current section
+    let sectionIdx = 0;
+    for (let i = 0; i < diffSections.length; i++) {
+      if (diffSections[i] <= currentDiff) sectionIdx = i;
+    }
+    const nextIdx = direction === 1
+      ? Math.min(sectionIdx + 1, diffSections.length - 1)
+      : Math.max(sectionIdx - 1, 0);
+    const target = diffSections[nextIdx];
+    setCurrentDiff(target);
+    fileDiffRef.current?.scrollToDiff(target);
+  }, [diffSections, currentDiff]);
+
+  // ── Keyboard shortcuts ────────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'F7') { e.preventDefault(); navigateDiff(-1); }
       if (e.key === 'F8') { e.preventDefault(); navigateDiff(+1); }
       if (e.key === 'Home' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); goFirstDiff(); }
       if (e.key === 'End' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); goLastDiff(); }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'l') { e.preventDefault(); copyFile('left', 'right'); }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'r') { e.preventDefault(); copyFile('right', 'left'); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [navigateDiff, goFirstDiff, goLastDiff]);
+  }, [navigateDiff, goFirstDiff, goLastDiff, leftFile, rightFile]);
 
-  // ── Open file
+  // ── Open file ─────────────────────────────────────────────────────────────
   async function openFile(side: 'left' | 'right') {
     if (!fsApiSupported) return;
     try {
       const [handle] = await window.showOpenFilePicker({ multiple: false });
       const file = await handle.getFile();
       const content = await file.text();
-      const info: FileInfo = { handle, content, name: file.name, size: file.size };
+      const info: FileInfo = { handle, content, name: file.name, size: file.size, lastModified: file.lastModified };
 
       let newLeft = leftFile;
       let newRight = rightFile;
@@ -99,11 +175,11 @@ export default function FileComparePage() {
     }
   }
 
-  // ── Compute file diff
+  // ── Compute file diff ─────────────────────────────────────────────────────
   async function runFileDiff(left: FileInfo, right: FileInfo) {
     setView('loading');
     await tick();
-    const ops = computeLineDiff(left.content, right.content);
+    const ops = computeLineDiff(left.content, right.content, comparisonOptions);
     const diffs = ops.filter(op => op.type !== 'equal').length;
     setDiffOps(ops);
     setCurrentDiff(-1);
@@ -115,7 +191,16 @@ export default function FileComparePage() {
     }
   }
 
-  // ── Copy / sync file
+  // ── Re-run diff when comparison options change ────────────────────────────
+  const optionsRef = useRef(comparisonOptions);
+  useEffect(() => {
+    if (optionsRef.current !== comparisonOptions && leftFile && rightFile) {
+      optionsRef.current = comparisonOptions;
+      runFileDiff(leftFile, rightFile);
+    }
+  }, [comparisonOptions]);
+
+  // ── Copy / sync file ──────────────────────────────────────────────────────
   async function copyFile(fromSide: 'left' | 'right', toSide: 'left' | 'right') {
     const from = fromSide === 'left' ? leftFile : rightFile;
     const to = toSide === 'left' ? leftFile : rightFile;
@@ -131,7 +216,7 @@ export default function FileComparePage() {
 
       const refreshed = await to.handle.getFile();
       const content = await refreshed.text();
-      const updated = { ...to, content, size: refreshed.size };
+      const updated = { ...to, content, size: refreshed.size, lastModified: refreshed.lastModified };
 
       if (toSide === 'left') setLeftFile(updated);
       else setRightFile(updated);
@@ -145,16 +230,77 @@ export default function FileComparePage() {
     }
   }
 
-  // ── Reload files
+  // ── Save file back to disk ─────────────────────────────────────────────────
+  async function saveFile(side: 'left' | 'right') {
+    const file = side === 'left' ? leftFile : rightFile;
+    if (!file) { addToast('No file to save', 'error'); return; }
+    try {
+      const perm = await file.handle.requestPermission({ mode: 'readwrite' });
+      if (perm !== 'granted') { addToast('Write permission denied', 'error'); return; }
+      const writable = await file.handle.createWritable();
+      await writable.write(file.content);
+      await writable.close();
+      // Refresh metadata
+      const refreshed = await file.handle.getFile();
+      const updated = { ...file, size: refreshed.size, lastModified: refreshed.lastModified };
+      if (side === 'left') setLeftFile(updated);
+      else setRightFile(updated);
+      addToast(`${file.name} saved`, 'success');
+    } catch (err: unknown) {
+      addToast('Save failed: ' + (err instanceof Error ? err.message : String(err)), 'error');
+    }
+  }
+
+  // ── Handle text changes in TextCompareView ────────────────────────────────
+  const handleLeftTextChange = useCallback(async (newText: string) => {
+    if (!leftFile) return;
+    const updated = { ...leftFile, content: newText, size: newText.length };
+    setLeftFile(updated);
+    if (rightFile) {
+      // Re-compute diff
+      const ops = computeLineDiff(newText, rightFile.content, comparisonOptions);
+      setDiffOps(ops);
+      const diffs = ops.filter(op => op.type !== 'equal').length;
+      setDiffCount(diffs);
+    }
+  }, [leftFile, rightFile, comparisonOptions]);
+
+  const handleRightTextChange = useCallback(async (newText: string) => {
+    if (!rightFile) return;
+    const updated = { ...rightFile, content: newText, size: newText.length };
+    setRightFile(updated);
+    if (leftFile) {
+      // Re-compute diff
+      const ops = computeLineDiff(leftFile.content, newText, comparisonOptions);
+      setDiffOps(ops);
+      const diffs = ops.filter(op => op.type !== 'equal').length;
+      setDiffCount(diffs);
+    }
+  }, [leftFile, rightFile, comparisonOptions]);
+
+  // ── Swap sides ────────────────────────────────────────────────────────────
+  async function handleSwap() {
+    const tmpLeft = leftFile;
+    const tmpRight = rightFile;
+    setLeftFile(tmpRight);
+    setRightFile(tmpLeft);
+    if (tmpLeft && tmpRight) {
+      await runFileDiff(tmpRight, tmpLeft);
+    }
+    addToast('Sides swapped', 'info');
+  }
+
+  // ── Reload files ──────────────────────────────────────────────────────────
   async function handleReload() {
-    if (!leftFile || !rightFile) return;
+    if (!leftFile || !rightFile) { addToast('Open both files first', 'info'); return; }
     try {
       const [lFile, rFile] = await Promise.all([leftFile.handle.getFile(), rightFile.handle.getFile()]);
       const [lContent, rContent] = await Promise.all([lFile.text(), rFile.text()]);
-      const newLeft = { ...leftFile, content: lContent, size: lFile.size };
-      const newRight = { ...rightFile, content: rContent, size: rFile.size };
+      const newLeft = { ...leftFile, content: lContent, size: lFile.size, lastModified: lFile.lastModified };
+      const newRight = { ...rightFile, content: rContent, size: rFile.size, lastModified: rFile.lastModified };
       setLeftFile(newLeft);
       setRightFile(newRight);
+      addToast('Files reloaded', 'success');
       await runFileDiff(newLeft, newRight);
     } catch (err: unknown) {
       addToast('Reload failed: ' + (err instanceof Error ? err.message : String(err)), 'error');
@@ -168,6 +314,68 @@ export default function FileComparePage() {
     setComparisonOptions(prev => ({ ...prev, [key]: value }));
   };
 
+  // ── Menu definitions ──────────────────────────────────────────────────────
+  const menus: MenuDefinition[] = useMemo(() => [
+    {
+      label: 'Session',
+      items: [
+        { label: 'New File Compare', action: () => { setLeftFile(null); setRightFile(null); setDiffOps([]); setView('empty'); setStatusMsg('Ready — select two files to compare'); } },
+        { label: 'New Folder Compare', action: () => router.push('/folder-compare') },
+        { label: 'New Text Compare', action: () => router.push('/text-compare') },
+        { separator: true },
+        { label: 'Home', action: () => router.push('/'), shortcut: 'Alt+Home' },
+        { separator: true },
+        { label: 'Close Tab', action: () => window.close() },
+      ],
+    },
+    {
+      label: 'File',
+      items: [
+        { label: 'Open Left…', action: () => openFile('left'), shortcut: 'Ctrl+1' },
+        { label: 'Open Right…', action: () => openFile('right'), shortcut: 'Ctrl+2' },
+        { separator: true },
+        { label: 'Reload', action: handleReload, shortcut: 'F5', disabled: !leftFile || !rightFile },
+        { separator: true },
+        { label: 'Copy Left → Right', action: () => copyFile('left', 'right'), shortcut: 'Ctrl+L', disabled: !showSync },
+        { label: 'Copy Right → Left', action: () => copyFile('right', 'left'), shortcut: 'Ctrl+R', disabled: !showSync },
+        { separator: true },
+        { label: 'Swap Sides', action: handleSwap, disabled: !leftFile && !rightFile },
+      ],
+    },
+    {
+      label: 'View',
+      items: [
+        { label: 'Show All', action: () => setDiffFilter('all'), checked: diffFilter === 'all' },
+        { label: 'Show Differences Only', action: () => setDiffFilter('diffs'), checked: diffFilter === 'diffs' },
+        { label: 'Show Same Only', action: () => setDiffFilter('same'), checked: diffFilter === 'same' },
+        { label: 'Show Context', action: () => setDiffFilter('context'), checked: diffFilter === 'context' },
+        { separator: true },
+        { label: 'Show Line Numbers', action: () => updateOption('showLineNumbers', !comparisonOptions.showLineNumbers), checked: comparisonOptions.showLineNumbers },
+      ],
+    },
+    {
+      label: 'Tools',
+      items: [
+        { label: 'Ignore Whitespace: None', action: () => updateOption('ignoreWhitespace', 'none'), checked: comparisonOptions.ignoreWhitespace === 'none' },
+        { label: 'Ignore Whitespace: Trailing', action: () => updateOption('ignoreWhitespace', 'trailing'), checked: comparisonOptions.ignoreWhitespace === 'trailing' },
+        { label: 'Ignore Whitespace: All', action: () => updateOption('ignoreWhitespace', 'all'), checked: comparisonOptions.ignoreWhitespace === 'all' },
+        { separator: true },
+        { label: 'Case Sensitive', action: () => updateOption('caseSensitive', !comparisonOptions.caseSensitive), checked: comparisonOptions.caseSensitive },
+        { label: 'Ignore Line Endings', action: () => updateOption('ignoreLineEndings', !comparisonOptions.ignoreLineEndings), checked: comparisonOptions.ignoreLineEndings },
+        { separator: true },
+        { label: 'Options…', action: () => setShowOptions(v => !v) },
+      ],
+    },
+    {
+      label: 'Help',
+      items: [
+        { label: 'Keyboard Shortcuts', action: () => addToast('F7: Prev diff • F8: Next diff • Ctrl+Home/End: First/Last • Ctrl+L/R: Copy', 'info') },
+        { separator: true },
+        { label: 'About QZL Compare', action: () => setShowAbout(true) },
+      ],
+    },
+  ], [diffFilter, comparisonOptions, leftFile, rightFile, showSync, router]);
+
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       {/* Title bar */}
@@ -176,127 +384,99 @@ export default function FileComparePage() {
           <span className="text-lg">⚖️</span>
           <span className="tracking-tight">
             {leftFile && rightFile
-              ? `${leftFile.name} ↔ ${rightFile.name} - Text Compare`
-              : 'Text Compare'
+              ? `${leftFile.name} ↔ ${rightFile.name} - File Compare`
+              : 'File Compare'
             } - QZL Compare
           </span>
         </div>
       </header>
 
       {/* Menu bar */}
-      <div className="flex items-center h-8 px-4 bg-[#1e242c] border-b border-[#4b5563]/50 text-[13px] text-[#9ca3af] shrink-0 gap-4 select-none">
-        <span className="hover:text-[#e5e7eb] cursor-pointer">Session</span>
-        <span className="hover:text-[#e5e7eb] cursor-pointer">File</span>
-        <span className="hover:text-[#e5e7eb] cursor-pointer">Edit</span>
-        <span className="hover:text-[#e5e7eb] cursor-pointer">Search</span>
-        <span className="hover:text-[#e5e7eb] cursor-pointer">View</span>
-        <span className="hover:text-[#e5e7eb] cursor-pointer">Tools</span>
-        <span className="hover:text-[#e5e7eb] cursor-pointer">Help</span>
-      </div>
+      <MenuBar menus={menus} />
 
-      {/* Toolbar */}
-      <div className="flex items-center gap-1 h-11 px-3 bg-[#12161c] border-b-2 border-[#4b5563] shrink-0 overflow-x-auto">
-        {/* Home */}
-        <Link href="/" className="btn btn-sm gap-1.5" title="Home">
-          🏠 <span className="hidden sm:inline text-[11px]">Home</span>
-        </Link>
+      {/* Toolbar — Beyond Compare style */}
+      <div className="flex items-center gap-0.5 h-10 px-2 bg-[#1e242c] border-b-2 border-[#4b5563] shrink-0 overflow-x-auto">
+        {/* View filter group */}
+        <ToolBtn icon="✱" label="All" active={diffFilter === 'all'} onClick={() => setDiffFilter('all')} title="Show all lines" />
+        <ToolBtn icon="≠" label="Diffs" active={diffFilter === 'diffs'} onClick={() => setDiffFilter('diffs')} title="Show differences only" />
+        <ToolBtn icon="=" label="Same" active={diffFilter === 'same'} onClick={() => setDiffFilter('same')} title="Show same lines only" />
+        <ToolBtn icon="⊞" label="Context" active={diffFilter === 'context'} onClick={() => setDiffFilter('context')} title="Show differences with context" />
+        <ToolBtn icon="~" label="Minor" active={showMinor} onClick={() => setShowMinor(v => !v)} title="Toggle minor (whitespace-only) differences" />
 
-        <div className="w-px h-7 bg-[#4b5563]/40" />
+        <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
 
-        {/* Diff navigation */}
+        {/* Rules & Format */}
+        <ToolBtn icon="📋" label="Rules" active={showOptions} onClick={() => setShowOptions(v => !v)} title="Comparison rules & options" />
+        <ToolBtn icon={comparisonOptions.showLineNumbers ? '✓' : ' '} label="Format" active={comparisonOptions.showLineNumbers} onClick={() => updateOption('showLineNumbers', !comparisonOptions.showLineNumbers)} title="Toggle line numbers" />
+
+        <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+
+        {/* Copy */}
+        <ToolBtn icon="→" label="Copy" onClick={() => copyFile('left', 'right')} disabled={!showSync} title="Copy left → right (Ctrl+L)" accent />
+        <ToolBtn icon="←" label="Copy" onClick={() => copyFile('right', 'left')} disabled={!showSync} title="Copy right → left (Ctrl+R)" accent />
+
+        <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+
+        {/* Section navigation */}
+        <ToolBtn icon="↓" label="Next Section" onClick={() => navigateSection(1)} disabled={!hasDiffs} title="Next diff section (F8)" />
+        <ToolBtn icon="↑" label="Prev Section" onClick={() => navigateSection(-1)} disabled={!hasDiffs} title="Previous diff section (F7)" />
+
+        <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+
+        {/* Swap & Reload */}
+        <ToolBtn icon="⇄" label="Swap" onClick={handleSwap} disabled={!leftFile && !rightFile} title="Swap left and right sides" />
+        <ToolBtn icon="↻" label="Reload" onClick={handleReload} disabled={!leftFile || !rightFile} title="Reload files from disk (F5)" />
+
         {hasDiffs && (
           <>
-            <div className="flex items-center gap-0.5 bg-[#252d37] p-0.5 rounded-lg border border-[#4b5563]/50">
-              <button onClick={goFirstDiff} className="btn btn-sm px-2" title="First difference">⏮</button>
-              <button onClick={() => navigateDiff(-1)} className="btn btn-sm px-2" title="Previous difference (F7)">◀</button>
-              <span className="text-xs text-[#9ca3af] px-2.5 py-1 bg-[#12161c] border border-[#4b5563]/50 rounded min-w-[60px] text-center tabular-nums select-none font-semibold">
-                {currentDiff + 1}/{diffCount}
-              </span>
-              <button onClick={() => navigateDiff(+1)} className="btn btn-sm px-2" title="Next difference (F8)">▶</button>
-              <button onClick={goLastDiff} className="btn btn-sm px-2" title="Last difference">⏭</button>
-            </div>
-            <div className="w-px h-7 bg-[#4b5563]/40" />
+            <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+            <span className="text-[11px] text-[#6b7280] px-1 tabular-nums select-none whitespace-nowrap">
+              {currentDiff + 1}/{diffCount} diffs • {diffSections.length} section{diffSections.length !== 1 ? 's' : ''}
+            </span>
           </>
         )}
-
-        {/* View filter buttons */}
-        <button className="btn btn-sm" title="Show all">✱ <span className="hidden sm:inline text-[11px]">All</span></button>
-        <button className="btn btn-sm btn-active" title="Show differences">≠ <span className="hidden sm:inline text-[11px]">Diffs</span></button>
-        <button className="btn btn-sm" title="Show same lines">= <span className="hidden sm:inline text-[11px]">Same</span></button>
-        <button className="btn btn-sm" title="Show context">📋 <span className="hidden sm:inline text-[11px]">Context</span></button>
-
-        <div className="w-px h-7 bg-[#4b5563]/40" />
-
-        {/* Copy / Sync buttons */}
-        {showSync && hasDiffs && (
-          <>
-            <button
-              onClick={() => copyFile('left', 'right')}
-              className="btn btn-sm text-sm bg-[#1e3a1e] text-[#56d364] border-[#2ea043] hover:bg-[#1a4a1a]"
-              title="Overwrite right file with left (Copy)"
-            >
-              📤 <span className="hidden sm:inline text-[11px]">Copy →</span>
-            </button>
-            <button
-              onClick={() => copyFile('right', 'left')}
-              className="btn btn-sm text-sm bg-[#1e3a1e] text-[#56d364] border-[#2ea043] hover:bg-[#1a4a1a]"
-              title="Overwrite left file with right (Copy)"
-            >
-              <span className="hidden sm:inline text-[11px]">← Copy</span> 📥
-            </button>
-            <div className="w-px h-7 bg-[#4b5563]/40" />
-          </>
-        )}
-
-        {/* Actions */}
-        <button onClick={handleReload} className="btn btn-sm" title="Reload files">🔄 <span className="hidden sm:inline text-[11px]">Reload</span></button>
-        <button className="btn btn-sm" title="Swap sides">🔀 <span className="hidden sm:inline text-[11px]">Swap</span></button>
 
         <div className="flex-1" />
-
-        {/* Options */}
-        <div className="relative">
-          <button
-            onClick={() => setShowOptions(!showOptions)}
-            className="btn btn-sm text-[11px]"
-            title="Comparison options"
-          >
-            ⚙️ Options
-          </button>
-          {showOptions && (
-            <div className="absolute top-full right-0 mt-1 w-64 bg-[#252d37] border border-[#4b5563] rounded-lg shadow-lg z-50 p-3 space-y-3">
-              <div>
-                <label className="text-xs font-semibold text-[#e5e7eb] block mb-1.5">Ignore Whitespace</label>
-                <select
-                  value={comparisonOptions.ignoreWhitespace}
-                  onChange={(e) => updateOption('ignoreWhitespace', e.target.value as ComparisonOptions['ignoreWhitespace'])}
-                  className="w-full px-2 py-1 text-xs bg-[#374151] text-[#e5e7eb] border border-[#4b5563] rounded"
-                >
-                  <option value="none">None</option>
-                  <option value="trailing">Trailing spaces</option>
-                  <option value="all">All whitespace</option>
-                  <option value="changes">In changes only</option>
-                </select>
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" id="cs" checked={comparisonOptions.caseSensitive} onChange={(e) => updateOption('caseSensitive', e.target.checked)} className="accent-[#cc3333]" />
-                <label htmlFor="cs" className="text-xs text-[#9ca3af] cursor-pointer">Case sensitive</label>
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" id="ile" checked={comparisonOptions.ignoreLineEndings} onChange={(e) => updateOption('ignoreLineEndings', e.target.checked)} className="accent-[#cc3333]" />
-                <label htmlFor="ile" className="text-xs text-[#9ca3af] cursor-pointer">Ignore line endings</label>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
 
+      {/* Rules panel (flyout) */}
+      {showOptions && (
+        <div className="flex items-center gap-4 px-3 py-2 bg-[#252d37] border-b border-[#4b5563] shrink-0 text-xs">
+          <div className="flex items-center gap-1.5">
+            <label className="text-[#9ca3af] whitespace-nowrap">Whitespace:</label>
+            <select
+              value={comparisonOptions.ignoreWhitespace}
+              onChange={(e) => updateOption('ignoreWhitespace', e.target.value as ComparisonOptions['ignoreWhitespace'])}
+              className="px-1.5 py-0.5 bg-[#374151] text-[#e5e7eb] border border-[#4b5563] rounded text-xs"
+            >
+              <option value="none">None</option>
+              <option value="trailing">Trailing</option>
+              <option value="all">All</option>
+              <option value="changes">Changes</option>
+            </select>
+          </div>
+          <label className="flex items-center gap-1 text-[#9ca3af] cursor-pointer whitespace-nowrap">
+            <input type="checkbox" checked={comparisonOptions.caseSensitive} onChange={(e) => updateOption('caseSensitive', e.target.checked)} className="accent-[#cc3333]" />
+            Case sensitive
+          </label>
+          <label className="flex items-center gap-1 text-[#9ca3af] cursor-pointer whitespace-nowrap">
+            <input type="checkbox" checked={comparisonOptions.ignoreLineEndings} onChange={(e) => updateOption('ignoreLineEndings', e.target.checked)} className="accent-[#cc3333]" />
+            Ignore line endings
+          </label>
+          <label className="flex items-center gap-1 text-[#9ca3af] cursor-pointer whitespace-nowrap">
+            <input type="checkbox" checked={comparisonOptions.showLineNumbers} onChange={(e) => updateOption('showLineNumbers', e.target.checked)} className="accent-[#cc3333]" />
+            Line numbers
+          </label>
+        </div>
+      )}
+
       {/* File path bars */}
-      <div className="grid shrink-0 bg-[#181d24] border-b-2 border-[#4b5563]"
+      <div className="grid shrink-0 bg-[#181d24]"
            style={{ gridTemplateColumns: '1fr 3px 1fr' }}>
         <FilePathBar
           file={leftFile}
           onOpen={() => openFile('left')}
+          onSave={() => saveFile('left')}
           fsApiSupported={fsApiSupported}
           placeholder="Left file"
         />
@@ -304,6 +484,7 @@ export default function FileComparePage() {
         <FilePathBar
           file={rightFile}
           onOpen={() => openFile('right')}
+          onSave={() => saveFile('right')}
           fsApiSupported={fsApiSupported}
           placeholder="Right file"
         />
@@ -315,7 +496,7 @@ export default function FileComparePage() {
           <div className="flex items-center justify-center h-full text-[#6b7280]">
             <div className="text-center">
               <div className="text-5xl mb-4">📄</div>
-              <p className="text-lg font-semibold text-[#9ca3af] mb-2">Text Compare</p>
+              <p className="text-lg font-semibold text-[#9ca3af] mb-2">File Compare</p>
               <p className="text-sm mb-6">Open two files to compare them side by side</p>
               {fsApiSupported ? (
                 <div className="flex gap-3 justify-center">
@@ -332,10 +513,26 @@ export default function FileComparePage() {
           </div>
         )}
         {view === 'loading' && <LoadingView />}
-        {view === 'diff' && (
+        {view === 'diff' && useTextCompareView && leftFile && rightFile && (
+          <TextCompareView
+            ops={filteredOps}
+            leftText={leftFile.content}
+            rightText={rightFile.content}
+            leftPath={leftFile.name}
+            rightPath={rightFile.name}
+            onLeftChange={handleLeftTextChange}
+            onRightChange={handleRightTextChange}
+            onSaveLeft={() => saveFile('left')}
+            onSaveRight={() => saveFile('right')}
+            onLoadLeft={() => openFile('left')}
+            onLoadRight={() => openFile('right')}
+            fsApiSupported={fsApiSupported}
+          />
+        )}
+        {view === 'diff' && !useTextCompareView && (
           <FileDiffView
             ref={fileDiffRef}
-            ops={diffOps}
+            ops={filteredOps}
             onDiffElementsChange={setDiffCount}
           />
         )}
@@ -349,35 +546,77 @@ export default function FileComparePage() {
         </span>
         <div className="flex items-center gap-4">
           {statusRight && <span className="text-[#6b7280] text-[11px]">{statusRight}</span>}
-          {leftFile && <span className="text-[#6b7280] text-[11px]">Load time: —</span>}
+          {diffFilter !== 'all' && <span className="text-[#cc3333] text-[11px]">Filter: {diffFilter}</span>}
         </div>
       </footer>
 
       <Toast toasts={toasts} onRemove={removeToast} />
+
+      {/* About dialog */}
+      {showAbout && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60" onClick={() => setShowAbout(false)}>
+          <div className="bg-[#252d37] border border-[#4b5563] rounded-xl shadow-2xl p-6 max-w-sm text-center" onClick={e => e.stopPropagation()}>
+            <div className="text-5xl mb-3">⚖️</div>
+            <h2 className="text-xl font-bold text-[#e5e7eb] mb-1">QZL Compare</h2>
+            <p className="text-sm text-[#9ca3af] mb-2">Version 0.1.0</p>
+            <p className="text-xs text-[#6b7280] mb-4">Free browser-based file & folder comparison tool.<br/>All processing happens locally.</p>
+            <button onClick={() => setShowAbout(false)} className="btn">Close</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function FilePathBar({ file, onOpen, fsApiSupported, placeholder }: {
+function FilePathBar({ file, onOpen, onSave, fsApiSupported, placeholder }: {
   file: FileInfo | null;
   onOpen: () => void;
+  onSave: () => void;
   fsApiSupported: boolean;
   placeholder: string;
 }) {
   return (
-    <div className="flex items-center gap-2 px-3 bg-[#252d37] overflow-hidden">
-      {fsApiSupported && (
-        <button onClick={onOpen} className="btn btn-sm shrink-0 text-[11px] my-1">📂</button>
-      )}
-      <div className="flex flex-col flex-1 min-w-0 py-1.5">
-        <span className="px-2 py-0.5 text-sm font-mono truncate bg-[#12161c] border border-[#4b5563]/40 rounded text-[#e5e7eb]"
-              title={file?.name}>
-          {file?.name || placeholder}
-        </span>
-        {file && (
-          <span className="text-[10px] text-[#6b7280] mt-0.5 px-1 truncate">
-            {formatSize(file.size)} • UTF-8
-          </span>
+    <div className="flex flex-col bg-[#1e242c] overflow-hidden">
+      {/* Row 1: Path input + action buttons */}
+      <div className="flex items-center gap-1 px-2 py-1">
+        <input
+          type="text"
+          readOnly
+          value={file?.name || ''}
+          placeholder={placeholder}
+          title={file?.name || placeholder}
+          className="flex-1 min-w-0 h-7 px-2 text-[13px] font-mono bg-[#12161c] text-[#e5e7eb] border border-[#4b5563]/60 rounded
+                     placeholder:text-[#4b5563] truncate outline-none focus:border-[#cc3333]/60
+                     cursor-default"
+        />
+        {fsApiSupported && (
+          <>
+            <button onClick={onOpen} className="shrink-0 w-7 h-7 flex items-center justify-center rounded
+                     bg-[#252d37] border border-[#4b5563]/50 text-[#9ca3af] hover:text-[#e5e7eb] hover:bg-[#374151]
+                     transition-colors" title="Browse for file">
+              📂
+            </button>
+            <button onClick={onSave} className="shrink-0 w-7 h-7 flex items-center justify-center rounded
+                     bg-[#252d37] border border-[#4b5563]/50 text-[#9ca3af] hover:text-[#e5e7eb] hover:bg-[#374151]
+                     transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                     title="Save file" disabled={!file}>
+              💾
+            </button>
+          </>
+        )}
+      </div>
+      {/* Row 2: File metadata */}
+      <div className="flex items-center gap-3 px-3 pb-1 text-[10px] text-[#6b7280] select-none border-b border-[#4b5563]">
+        {file ? (
+          <>
+            <span>{file.lastModified ? new Date(file.lastModified).toLocaleString() : ''}</span>
+            <span className="text-[#4b5563]">│</span>
+            <span>{formatSize(file.size)}</span>
+            <span className="text-[#4b5563]">│</span>
+            <span>UTF-8</span>
+          </>
+        ) : (
+          <span className="italic">No file selected</span>
         )}
       </div>
     </div>
