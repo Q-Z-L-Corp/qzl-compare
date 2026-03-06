@@ -7,6 +7,7 @@ import { computeLineDiff } from '@/lib/diff';
 import { countLines, formatSize, getFileIcon } from '@/lib/formatters';
 import { listChildren, expandAllRecursive } from '@/lib/fsUtils';
 import FileDiffView, { FileDiffViewHandle } from '@/components/FileDiffView';
+import TextCompareView from '@/components/TextCompareView';
 import MenuBar, { type MenuDefinition } from '@/components/MenuBar';
 import LoadingView from '@/components/LoadingView';
 import ToolBtn from '@/components/ToolBtn';
@@ -213,12 +214,56 @@ export default function FolderComparePage() {
     const ops = computeLineDiff(lContent, rContent);
     const diffs = ops.filter(op => op.type !== 'equal').length;
     setDiffOps(ops);
+    setDiffCount(diffs);
     setCurrentDiff(-1);
     setStatusMsg(`${diffs} difference${diffs !== 1 ? 's' : ''} found`);
     setStatusRight(`${countLines(lContent)} / ${countLines(rContent)} lines`);
     setView('file-diff');
     if (diffs > 0) {
       setTimeout(() => { setCurrentDiff(0); fileDiffRef.current?.scrollToDiff(0); }, 50);
+    }
+  }
+
+  // ── Handle text changes in TextCompareView ────────────────────────────────
+  const handleLeftTextChange = useCallback(async (newText: string) => {
+    if (!leftFile) return;
+    const updated = { ...leftFile, content: newText, size: newText.length };
+    setLeftFile(updated);
+    if (rightFile) {
+      // Re-compute diff
+      const ops = computeLineDiff(newText, rightFile.content);
+      setDiffOps(ops);
+      const diffs = ops.filter(op => op.type !== 'equal').length;
+      setDiffCount(diffs);
+    }
+  }, [leftFile, rightFile]);
+
+  const handleRightTextChange = useCallback(async (newText: string) => {
+    if (!rightFile) return;
+    const updated = { ...rightFile, content: newText, size: newText.length };
+    setRightFile(updated);
+    if (leftFile) {
+      // Re-compute diff
+      const ops = computeLineDiff(leftFile.content, newText);
+      setDiffOps(ops);
+      const diffs = ops.filter(op => op.type !== 'equal').length;
+      setDiffCount(diffs);
+    }
+  }, [leftFile, rightFile]);
+
+  // ── Save file back
+  async function saveFile(side: 'left' | 'right') {
+    const file = side === 'left' ? leftFile : rightFile;
+    if (!file) return;
+    try {
+      const perm = await file.handle.requestPermission({ mode: 'readwrite' });
+      if (perm !== 'granted') { addToast('Write permission denied', 'error'); return; }
+      const writable = await file.handle.createWritable();
+      await writable.write(file.content);
+      await writable.close();
+      addToast(`${file.name} saved`, 'success');
+    } catch (err: unknown) {
+      addToast('Save failed: ' + (err instanceof Error ? err.message : String(err)), 'error');
     }
   }
 
@@ -535,11 +580,20 @@ export default function FolderComparePage() {
             filesOnlyMode={filesOnlyMode}
           />
         )}
-        {view === 'file-diff' && (
-          <FileDiffView
-            ref={fileDiffRef}
+        {view === 'file-diff' && leftFile && rightFile && (
+          <TextCompareView
             ops={diffOps}
-            onDiffElementsChange={setDiffCount}
+            leftText={leftFile.content}
+            rightText={rightFile.content}
+            leftPath={leftFile.name}
+            rightPath={rightFile.name}
+            onLeftChange={handleLeftTextChange}
+            onRightChange={handleRightTextChange}
+            onSaveLeft={() => saveFile('left')}
+            onSaveRight={() => saveFile('right')}
+            onLoadLeft={() => openFolder('left')}
+            onLoadRight={() => openFolder('right')}
+            fsApiSupported={fsApiSupported}
           />
         )}
       </main>
@@ -748,34 +802,57 @@ function TreeRow({ node, onExpand, onCompare, onCopy, selectMode, selected, onTo
 }) {
   const meta = STATUS_META[node.status] ?? STATUS_META.same;
   const indent = node.depth * 20;
+  
+  // Allow clicking row to compare if both files exist
+  const canCompare = !node.isDirectory && node.leftHandle && node.rightHandle;
+  const handleRowClick = () => {
+    if (canCompare) {
+      onCompare(node);
+    }
+  };
 
   return (
-    <div className={`flex items-center px-4 py-1 border-b border-[#2a2a3a] transition-colors ${ROW_BG[node.status] ?? ''} ${selected ? 'ring-1 ring-inset ring-[#cc3333]/50 bg-[#cc3333]/10' : ''}`}>
+    <div 
+      className={`flex items-center px-4 py-1 border-b border-[#2a2a3a] transition-colors ${ROW_BG[node.status] ?? ''} ${selected ? 'ring-1 ring-inset ring-[#cc3333]/50 bg-[#cc3333]/10' : ''} ${canCompare ? 'cursor-pointer' : ''}`}
+      onClick={handleRowClick}
+    >
       {/* Checkbox (select mode) */}
       {selectMode && (
         <div className="w-6 shrink-0 flex items-center justify-center">
           {!node.isDirectory && (
-            <input type="checkbox" checked={selected} onChange={() => onToggleSelect(node.path)} className="accent-[#cc3333] cursor-pointer" />
+            <input 
+              type="checkbox" 
+              checked={selected} 
+              onChange={(e) => {
+                e.stopPropagation();
+                onToggleSelect(node.path);
+              }} 
+              onClick={(e) => e.stopPropagation()}
+              className="accent-[#cc3333] cursor-pointer" 
+            />
           )}
         </div>
       )}
       {/* Name with indent */}
       <div className="flex-1 min-w-0 flex items-center gap-1.5" style={{ paddingLeft: indent }}>
         {node.isDirectory ? (
-          <button onClick={() => onExpand(node.path)} className="flex items-center gap-1 hover:text-[#cc3333] transition-colors min-w-0">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onExpand(node.path);
+            }} 
+            className="flex items-center gap-1 hover:text-[#cc3333] transition-colors min-w-0"
+          >
             <span className="text-[10px] text-[#6b7280] w-3 shrink-0">{node.expanded ? '▾' : '▸'}</span>
             <span className="shrink-0">📁</span>
             <span className="truncate text-[13px] text-[#e5e7eb] font-medium">{node.name}</span>
           </button>
         ) : (
-          <button
-            onClick={() => { if (node.leftHandle && node.rightHandle) onCompare(node); }}
-            className="flex items-center gap-1 hover:text-[#cc3333] transition-colors min-w-0"
-          >
+          <div className="flex items-center gap-1 min-w-0">
             <span className="w-3 shrink-0" />
             <span className="shrink-0 text-sm opacity-90">{getFileIcon(node.name)}</span>
             <span className="truncate text-[13px] text-[#e5e7eb] font-medium">{node.name}</span>
-          </button>
+          </div>
         )}
       </div>
 
@@ -805,17 +882,38 @@ function TreeRow({ node, onExpand, onCompare, onCopy, selectMode, selected, onTo
         {!node.isDirectory && (
           <>
             {node.leftHandle && node.rightHandle && node.status === 'different' && (
-              <button onClick={() => onCompare(node)} className="px-1 py-0.5 text-[10px] bg-[#374151] text-[#3b82f6] hover:bg-[#4b5563] rounded" title="Compare">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCompare(node);
+                }} 
+                className="px-1 py-0.5 text-[10px] bg-[#374151] text-[#3b82f6] hover:bg-[#4b5563] rounded" 
+                title="Compare"
+              >
                 🔍
               </button>
             )}
             {node.status !== 'same' && node.leftHandle && (
-              <button onClick={() => onCopy(node, 'left', 'right')} className="px-1 py-0.5 text-[10px] bg-[#374151] text-[#56d364] hover:bg-[#2a4a2a] rounded" title="Copy left → right">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCopy(node, 'left', 'right');
+                }} 
+                className="px-1 py-0.5 text-[10px] bg-[#374151] text-[#56d364] hover:bg-[#2a4a2a] rounded" 
+                title="Copy left → right"
+              >
                 →
               </button>
             )}
             {node.status !== 'same' && node.rightHandle && (
-              <button onClick={() => onCopy(node, 'right', 'left')} className="px-1 py-0.5 text-[10px] bg-[#374151] text-[#56d364] hover:bg-[#2a4a2a] rounded" title="Copy right ← left">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCopy(node, 'right', 'left');
+                }} 
+                className="px-1 py-0.5 text-[10px] bg-[#374151] text-[#56d364] hover:bg-[#2a4a2a] rounded" 
+                title="Copy right ← left"
+              >
                 ←
               </button>
             )}

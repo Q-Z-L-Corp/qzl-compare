@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import type { DiffOp } from '@/types';
 import TextDiffView from './TextDiffView';
+import DetailedDiffPanel from './DetailedDiffPanel';
 import { countLines } from '@/lib/formatters';
 
 interface TextCompareViewProps {
@@ -30,10 +31,21 @@ export default function TextCompareView({
   fsApiSupported,
 }: TextCompareViewProps) {
   const [showEditors, setShowEditors] = useState(false);
+  const [selectedLine, setSelectedLine] = useState<number | undefined>(undefined);
+  const [selectedLeftLine, setSelectedLeftLine] = useState('');
+  const [selectedRightLine, setSelectedRightLine] = useState('');
+  const [showDetailedDiff, setShowDetailedDiff] = useState(true);
   
   const leftLines = useMemo(() => countLines(leftText), [leftText]);
   const rightLines = useMemo(() => countLines(rightText), [rightText]);
   const diffCount = useMemo(() => ops.filter(op => op.type !== 'equal').length, [ops]);
+
+  const handleLineSelect = (lineIndex: number, leftLine: string, rightLine: string) => {
+    setSelectedLine(lineIndex);
+    setSelectedLeftLine(leftLine);
+    setSelectedRightLine(rightLine);
+    setShowDetailedDiff(true);
+  };
 
   return (
     <div className="flex flex-col h-full bg-[#181d24]">
@@ -46,12 +58,27 @@ export default function TextCompareView({
       </div>
 
       {/* Diff view with diff lines comparison */}
-      <div className="flex-1 overflow-hidden flex flex-col">
-        <TextDiffView
-          ops={ops}
-          onLeftChange={onLeftChange}
-          onRightChange={onRightChange}
-        />
+      <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+        <div className={`flex-1 overflow-hidden ${showDetailedDiff && selectedLine !== undefined ? 'max-h-[60%]' : ''}`}>
+          <TextDiffView
+            ops={ops}
+            onLeftChange={onLeftChange}
+            onRightChange={onRightChange}
+            onLineSelect={handleLineSelect}
+            selectedLine={selectedLine}
+          />
+        </div>
+
+        {/* Detailed character-level diff panel */}
+        {showDetailedDiff && selectedLine !== undefined && (
+          <div className="h-[40%] min-h-[200px] border-t-2 border-[#4b5563]">
+            <DetailedDiffPanel
+              leftLine={selectedLeftLine}
+              rightLine={selectedRightLine}
+              lineNumber={selectedLine + 1}
+            />
+          </div>
+        )}
       </div>
 
       {/* Inline editors toggle */}
@@ -88,13 +115,29 @@ export default function TextCompareView({
           </span>
           <span className="text-[#6b7280]">•</span>
           <span>{leftLines} lines • {rightLines} lines</span>
+          {selectedLine !== undefined && (
+            <>
+              <span className="text-[#6b7280]">•</span>
+              <span className="text-blue-400">Line {selectedLine + 1} selected</span>
+            </>
+          )}
         </div>
-        <button
-          onClick={() => setShowEditors(!showEditors)}
-          className={`btn btn-sm text-xs ${showEditors ? 'btn-active' : 'bg-[#374151]'}`}
-        >
-          {showEditors ? '🔍 View' : '✏️ Edit'}
-        </button>
+        <div className="flex gap-2">
+          {selectedLine !== undefined && (
+            <button
+              onClick={() => setShowDetailedDiff(!showDetailedDiff)}
+              className={`btn btn-sm text-xs ${showDetailedDiff ? 'btn-active' : 'bg-[#374151]'}`}
+            >
+              {showDetailedDiff ? '🔍 Hide Details' : '🔍 Show Details'}
+            </button>
+          )}
+          <button
+            onClick={() => setShowEditors(!showEditors)}
+            className={`btn btn-sm text-xs ${showEditors ? 'btn-active' : 'bg-[#374151]'}`}
+          >
+            {showEditors ? '📝 View' : '✏️ Edit'}
+          </button>
+        </div>
       </div>
     </div>
   );

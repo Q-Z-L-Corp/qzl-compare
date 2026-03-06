@@ -6,6 +6,7 @@ import type { FileInfo, DiffOp, ToastMessage, ComparisonOptions } from '@/types'
 import { computeLineDiff } from '@/lib/diff';
 import { countLines, formatSize } from '@/lib/formatters';
 import FileDiffView, { FileDiffViewHandle } from '@/components/FileDiffView';
+import TextCompareView from '@/components/TextCompareView';
 import MenuBar, { type MenuDefinition } from '@/components/MenuBar';
 import LoadingView from '@/components/LoadingView';
 import ToolBtn from '@/components/ToolBtn';
@@ -28,6 +29,7 @@ export default function FileComparePage() {
   const [currentDiff, setCurrentDiff] = useState(-1);
   const [diffFilter, setDiffFilter] = useState<DiffFilter>('all');
   const [showMinor, setShowMinor] = useState(true);
+  const [useTextCompareView, setUseTextCompareView] = useState(true);
   const [comparisonOptions, setComparisonOptions] = useState<ComparisonOptions>({
     ignoreWhitespace: 'none',
     caseSensitive: true,
@@ -248,6 +250,33 @@ export default function FileComparePage() {
       addToast('Save failed: ' + (err instanceof Error ? err.message : String(err)), 'error');
     }
   }
+
+  // ── Handle text changes in TextCompareView ────────────────────────────────
+  const handleLeftTextChange = useCallback(async (newText: string) => {
+    if (!leftFile) return;
+    const updated = { ...leftFile, content: newText, size: newText.length };
+    setLeftFile(updated);
+    if (rightFile) {
+      // Re-compute diff
+      const ops = computeLineDiff(newText, rightFile.content, comparisonOptions);
+      setDiffOps(ops);
+      const diffs = ops.filter(op => op.type !== 'equal').length;
+      setDiffCount(diffs);
+    }
+  }, [leftFile, rightFile, comparisonOptions]);
+
+  const handleRightTextChange = useCallback(async (newText: string) => {
+    if (!rightFile) return;
+    const updated = { ...rightFile, content: newText, size: newText.length };
+    setRightFile(updated);
+    if (leftFile) {
+      // Re-compute diff
+      const ops = computeLineDiff(leftFile.content, newText, comparisonOptions);
+      setDiffOps(ops);
+      const diffs = ops.filter(op => op.type !== 'equal').length;
+      setDiffCount(diffs);
+    }
+  }, [leftFile, rightFile, comparisonOptions]);
 
   // ── Swap sides ────────────────────────────────────────────────────────────
   async function handleSwap() {
@@ -484,7 +513,23 @@ export default function FileComparePage() {
           </div>
         )}
         {view === 'loading' && <LoadingView />}
-        {view === 'diff' && (
+        {view === 'diff' && useTextCompareView && leftFile && rightFile && (
+          <TextCompareView
+            ops={filteredOps}
+            leftText={leftFile.content}
+            rightText={rightFile.content}
+            leftPath={leftFile.name}
+            rightPath={rightFile.name}
+            onLeftChange={handleLeftTextChange}
+            onRightChange={handleRightTextChange}
+            onSaveLeft={() => saveFile('left')}
+            onSaveRight={() => saveFile('right')}
+            onLoadLeft={() => openFile('left')}
+            onLoadRight={() => openFile('right')}
+            fsApiSupported={fsApiSupported}
+          />
+        )}
+        {view === 'diff' && !useTextCompareView && (
           <FileDiffView
             ref={fileDiffRef}
             ops={filteredOps}

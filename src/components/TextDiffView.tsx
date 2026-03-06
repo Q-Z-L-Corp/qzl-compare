@@ -1,17 +1,26 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import type { DiffOp } from '@/types';
 
 interface TextDiffViewProps {
   ops: DiffOp[];
   onLeftChange?: (text: string) => void;
   onRightChange?: (text: string) => void;
+  onLineSelect?: (lineIndex: number, leftLine: string, rightLine: string) => void;
+  selectedLine?: number;
 }
 
-export default function TextDiffView({ ops, onLeftChange, onRightChange }: TextDiffViewProps) {
+export default function TextDiffView({ 
+  ops, 
+  onLeftChange, 
+  onRightChange,
+  onLineSelect,
+  selectedLine
+}: TextDiffViewProps) {
   const [showSame, setShowSame] = useState(false);
   const [showContext, setShowContext] = useState(true);
+  const [editMode, setEditMode] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   
   // Compute left and right lines from ops using useMemo
@@ -41,6 +50,24 @@ export default function TextDiffView({ ops, onLeftChange, onRightChange }: TextD
     }
     return { leftLines: left, rightLines: right };
   }, [ops]);
+
+  const handleLineClick = useCallback((lineIdx: number) => {
+    if (onLineSelect) {
+      onLineSelect(lineIdx, leftLines[lineIdx] || '', rightLines[lineIdx] || '');
+    }
+  }, [onLineSelect, leftLines, rightLines]);
+
+  const handleLineEdit = useCallback((side: 'left' | 'right', lineIdx: number, newValue: string) => {
+    if (side === 'left' && onLeftChange) {
+      const allLeftLines = leftLines.map((l, i) => i === lineIdx ? newValue : l);
+      const newText = allLeftLines.filter((l, i) => l !== '' || rightLines[i] !== '').join('\n');
+      onLeftChange(newText);
+    } else if (side === 'right' && onRightChange) {
+      const allRightLines = rightLines.map((l, i) => i === lineIdx ? newValue : l);
+      const newText = allRightLines.filter((l, i) => l !== '' || leftLines[i] !== '').join('\n');
+      onRightChange(newText);
+    }
+  }, [onLeftChange, onRightChange, leftLines, rightLines]);
 
   const handleCopyToRight = (lineIdx: number) => {
     const line = leftLines[lineIdx];
@@ -80,13 +107,20 @@ export default function TextDiffView({ ops, onLeftChange, onRightChange }: TextD
       if (!showSame && status === 'equal') return null;
       if (!showContext && status === 'equal') return null;
 
+      const isSelected = selectedLine === idx;
+
       return (
-        <tr key={`${idx}`} className={`border-b border-[rgba(69,71,90,0.1)]
+        <tr 
+          key={`${idx}`} 
+          className={`border-b border-[rgba(69,71,90,0.1)] cursor-pointer
+          ${isSelected ? 'ring-2 ring-blue-500 ring-inset' : ''}
           ${status === 'equal' ? 'hover:bg-[rgba(255,255,255,0.02)]' : ''}
           ${status === 'delete' ? 'bg-[rgba(248,81,73,0.08)] hover:bg-[rgba(248,81,73,0.12)]' : ''}
           ${status === 'insert' ? 'bg-[rgba(86,211,100,0.08)] hover:bg-[rgba(86,211,100,0.12)]' : ''}
           ${status === 'replace' ? 'bg-[rgba(227,179,65,0.08)] hover:bg-[rgba(227,179,65,0.12)]' : ''}
-        `}>
+        `}
+          onClick={() => handleLineClick(idx)}
+        >
           {/* Left side */}
           <td className="py-0 px-0 w-12 text-center text-xs font-mono text-[#6b7280] bg-[#181d24] border-r border-[#4b5563] select-none">
             {status !== 'insert' ? idx + 1 : ''}
@@ -95,22 +129,37 @@ export default function TextDiffView({ ops, onLeftChange, onRightChange }: TextD
             ${status === 'delete' ? 'bg-[#2a1515]' : ''}
             ${status === 'replace' ? 'bg-[#2b1d0a]' : ''}
           `}>
-            <code
-              className={`block break-words text-left
-                ${status === 'delete' ? 'text-[#f85149]' : ''}
-                ${status === 'replace' ? 'text-[#e3b341]' : ''}
-                ${status === 'equal' ? 'text-[#e5e7eb]' : ''}
-              `}
-            >
-              {leftLines[idx] || ' '}
-            </code>
+            {editMode && status !== 'insert' ? (
+              <input
+                type="text"
+                value={leftLines[idx] || ''}
+                onChange={(e) => handleLineEdit('left', idx, e.target.value)}
+                className="w-full bg-transparent border-none outline-none text-inherit font-mono text-[13px] leading-6"
+                style={{
+                  color: status === 'delete' ? '#f85149' : status === 'replace' ? '#e3b341' : '#e5e7eb'
+                }}
+              />
+            ) : (
+              <code
+                className={`block break-words text-left
+                  ${status === 'delete' ? 'text-[#f85149]' : ''}
+                  ${status === 'replace' ? 'text-[#e3b341]' : ''}
+                  ${status === 'equal' ? 'text-[#e5e7eb]' : ''}
+                `}
+              >
+                {leftLines[idx] || ' '}
+              </code>
+            )}
           </td>
           
           {/* Gutter */}
           <td className="py-1 px-2 w-16 text-center bg-[#12161c] border-x border-[#4b5563]/30">
             {status === 'delete' && (
               <button
-                onClick={() => handleCopyToRight(idx)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCopyToRight(idx);
+                }}
                 className="px-2 py-1 text-xs font-bold text-[#56d364] hover:bg-[#1a3a1a] rounded transition-colors"
                 title="Copy to right"
               >
@@ -119,7 +168,10 @@ export default function TextDiffView({ ops, onLeftChange, onRightChange }: TextD
             )}
             {status === 'insert' && (
               <button
-                onClick={() => handleCopyToLeft(idx)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCopyToLeft(idx);
+                }}
                 className="px-2 py-1 text-xs font-bold text-[#56d364] hover:bg-[#1a3a1a] rounded transition-colors"
                 title="Copy to left"
               >
@@ -129,14 +181,20 @@ export default function TextDiffView({ ops, onLeftChange, onRightChange }: TextD
             {status === 'replace' && (
               <div className="flex gap-1 justify-center">
                 <button
-                  onClick={() => handleCopyToRight(idx)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCopyToRight(idx);
+                  }}
                   className="px-1.5 py-1 text-xs font-bold text-[#79c0ff] hover:bg-[#1a2a3a] rounded transition-colors"
                   title="Copy left to right"
                 >
                   →
                 </button>
                 <button
-                  onClick={() => handleCopyToLeft(idx)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCopyToLeft(idx);
+                  }}
                   className="px-1.5 py-1 text-xs font-bold text-[#79c0ff] hover:bg-[#1a2a3a] rounded transition-colors"
                   title="Copy right to left"
                 >
@@ -154,15 +212,27 @@ export default function TextDiffView({ ops, onLeftChange, onRightChange }: TextD
             ${status === 'insert' ? 'bg-[#152220]' : ''}
             ${status === 'replace' ? 'bg-[#132608]' : ''}
           `}>
-            <code
-              className={`block break-words text-left
-                ${status === 'insert' ? 'text-[#56d364]' : ''}
-                ${status === 'replace' ? 'text-[#e3b341]' : ''}
-                ${status === 'equal' ? 'text-[#e5e7eb]' : ''}
-              `}
-            >
-              {rightLines[idx] || ' '}
-            </code>
+            {editMode && status !== 'delete' ? (
+              <input
+                type="text"
+                value={rightLines[idx] || ''}
+                onChange={(e) => handleLineEdit('right', idx, e.target.value)}
+                className="w-full bg-transparent border-none outline-none text-inherit font-mono text-[13px] leading-6"
+                style={{
+                  color: status === 'insert' ? '#56d364' : status === 'replace' ? '#e3b341' : '#e5e7eb'
+                }}
+              />
+            ) : (
+              <code
+                className={`block break-words text-left
+                  ${status === 'insert' ? 'text-[#56d364]' : ''}
+                  ${status === 'replace' ? 'text-[#e3b341]' : ''}
+                  ${status === 'equal' ? 'text-[#e5e7eb]' : ''}
+                `}
+              >
+                {rightLines[idx] || ' '}
+              </code>
+            )}
           </td>
         </tr>
       );
@@ -175,6 +245,14 @@ export default function TextDiffView({ ops, onLeftChange, onRightChange }: TextD
     <div className="flex flex-col h-full bg-[#181d24]" ref={containerRef}>
       {/* Toolbar */}
       <div className="flex items-center gap-2 h-10 px-4 bg-[#12161c] border-b-2 border-[#4b5563] shrink-0">
+        <button
+          onClick={() => setEditMode(!editMode)}
+          className={`btn btn-sm text-xs ${editMode ? 'btn-active bg-blue-600' : ''}`}
+          title="Toggle inline editing"
+        >
+          {editMode ? '📝 Edit Mode' : '👁️ View Mode'}
+        </button>
+        <div className="w-px h-5 bg-[#4b5563]" />
         <button
           onClick={() => setShowContext(!showContext)}
           className={`btn btn-sm text-xs ${showContext ? 'btn-active' : ''}`}
@@ -191,6 +269,11 @@ export default function TextDiffView({ ops, onLeftChange, onRightChange }: TextD
         </button>
         <div className="ml-auto text-xs text-[#6b7280]">
           📊 {diffCount} difference{diffCount !== 1 ? 's' : ''}
+          {selectedLine !== undefined && (
+            <span className="ml-3 text-blue-400">
+              • Line {selectedLine + 1} selected
+            </span>
+          )}
         </div>
       </div>
 
