@@ -211,12 +211,14 @@ export default function HomePage() {
             /* Session cards grid (no selection) */
             <div className="flex-1 flex flex-col items-center justify-center p-10">
               <div className="text-center mb-10">
-                <div className="text-5xl mb-4 select-none">⚖️</div>
+                <div className="text-5xl mb-4 select-none" aria-hidden="true">⚖️</div>
                 <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-[#cc3333] to-[#3b82f6] bg-clip-text text-transparent">
                   QZL Compare
                 </h1>
-                <p className="text-sm text-[#6b7280]">
-                  Select a session type to get started, or click an action below
+                <p className="text-sm text-[#9ca3af] max-w-md">
+                  Free online tool to <strong className="text-[#e5e7eb] font-medium">compare files</strong>,{' '}
+                  <strong className="text-[#e5e7eb] font-medium">compare folders</strong>, and run a{' '}
+                  <strong className="text-[#e5e7eb] font-medium">text diff</strong> — instantly in your browser, no install needed.
                 </p>
               </div>
 
@@ -226,18 +228,39 @@ export default function HomePage() {
                     key={session.id}
                     href={session.href}
                     className="group flex flex-col items-center gap-3 p-6 rounded-xl bg-[#252d37] border border-[#4b5563]/50 hover:border-[#cc3333]/50 hover:bg-[#2f3842] transition-all hover:shadow-lg hover:shadow-[#cc3333]/5 cursor-pointer"
+                    aria-label={`Open ${session.name}`}
                   >
-                    <div className="text-5xl group-hover:scale-110 transition-transform">{session.icon}</div>
+                    <div className="text-5xl group-hover:scale-110 transition-transform" aria-hidden="true">{session.icon}</div>
                     <span className="text-sm font-semibold text-[#e5e7eb] text-center">{session.name}</span>
                   </Link>
                 ))}
               </div>
 
-              {/* Info footer */}
-              <div className="mt-10 flex gap-8 text-xs text-[#6b7280]">
-                <span>🔒 All processing happens locally in your browser</span>
-                <span>💡 Use Chrome, Edge, or Chromium for full features</span>
-              </div>
+              {/* SEO feature highlights */}
+              <section className="mt-10 max-w-2xl w-full" aria-label="Features">
+                <h2 className="sr-only">Why use QZL Compare?</h2>
+                <ul className="grid grid-cols-2 gap-3 text-xs text-[#6b7280]">
+                  <li className="flex items-start gap-2">
+                    <span aria-hidden="true">🔒</span>
+                    <span><strong className="text-[#9ca3af]">100% private</strong> — all processing happens locally in your browser, files are never uploaded</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span aria-hidden="true">⚡</span>
+                    <span><strong className="text-[#9ca3af]">Instant file difference checker</strong> — line-level diffs with character-level highlights</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span aria-hidden="true">📁</span>
+                    <span><strong className="text-[#9ca3af]">Compare folders online</strong> — detect added, removed, and modified files across entire directories</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span aria-hidden="true">📝</span>
+                    <span><strong className="text-[#9ca3af]">Text diff tool</strong> — paste text directly to see real-time differences, no file needed</span>
+                  </li>
+                </ul>
+                <p className="mt-4 text-[11px] text-[#4b5563] text-center">
+                  💡 Use Chrome, Edge, or Chromium for full File System Access API features
+                </p>
+              </section>
             </div>
           )}
         </main>

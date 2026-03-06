@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#12161c"/>
+
+  <!-- Subtle grid lines -->
+  <line x1="0" y1="315" x2="1200" y2="315" stroke="#1e242c" stroke-width="1"/>
+  <line x1="600" y1="0" x2="600" y2="630" stroke="#1e242c" stroke-width="1"/>
+
+  <!-- Left panel -->
+  <rect x="60" y="180" width="480" height="270" rx="12" fill="#1e242c" stroke="#4b5563" stroke-width="1"/>
+  <!-- Left panel header -->
+  <rect x="60" y="180" width="480" height="42" rx="12" fill="#252d37"/>
+  <rect x="60" y="204" width="480" height="18" fill="#252d37"/>
+  <circle cx="90" cy="201" r="6" fill="#cc3333"/>
+  <circle cx="110" cy="201" r="6" fill="#f59e0b"/>
+  <circle cx="130" cy="201" r="6" fill="#2ea043"/>
+  <!-- Left panel diff lines -->
+  <rect x="80" y="242" width="320" height="8" rx="4" fill="#3b82f6" opacity="0.3"/>
+  <rect x="80" y="262" width="260" height="8" rx="4" fill="#4b5563" opacity="0.5"/>
+  <rect x="80" y="282" width="cc3333" height="8" rx="4" fill="#cc3333" opacity="0.4"/>
+  <rect x="80" y="282" width="200" height="8" rx="4" fill="#cc3333" opacity="0.4"/>
+  <rect x="80" y="302" width="280" height="8" rx="4" fill="#4b5563" opacity="0.5"/>
+  <rect x="80" y="322" width="240" height="8" rx="4" fill="#4b5563" opacity="0.5"/>
+  <rect x="80" y="342" width="300" height="8" rx="4" fill="#2ea043" opacity="0.4"/>
+  <rect x="80" y="362" width="180" height="8" rx="4" fill="#4b5563" opacity="0.5"/>
+  <rect x="80" y="382" width="260" height="8" rx="4" fill="#4b5563" opacity="0.5"/>
+  <rect x="80" y="402" width="220" height="8" rx="4" fill="#cc3333" opacity="0.4"/>
+
+  <!-- Right panel -->
+  <rect x="660" y="180" width="480" height="270" rx="12" fill="#1e242c" stroke="#4b5563" stroke-width="1"/>
+  <!-- Right panel header -->
+  <rect x="660" y="180" width="480" height="42" rx="12" fill="#252d37"/>
+  <rect x="660" y="204" width="480" height="18" fill="#252d37"/>
+  <circle cx="690" cy="201" r="6" fill="#cc3333"/>
+  <circle cx="710" cy="201" r="6" fill="#f59e0b"/>
+  <circle cx="730" cy="201" r="6" fill="#2ea043"/>
+  <!-- Right panel diff lines -->
+  <rect x="680" y="242" width="320" height="8" rx="4" fill="#3b82f6" opacity="0.3"/>
+  <rect x="680" y="262" width="260" height="8" rx="4" fill="#4b5563" opacity="0.5"/>
+  <rect x="680" y="282" width="240" height="8" rx="4" fill="#2ea043" opacity="0.4"/>
+  <rect x="680" y="302" width="280" height="8" rx="4" fill="#4b5563" opacity="0.5"/>
+  <rect x="680" y="322" width="200" height="8" rx="4" fill="#2ea043" opacity="0.4"/>
+  <rect x="680" y="342" width="300" height="8" rx="4" fill="#2ea043" opacity="0.4"/>
+  <rect x="680" y="362" width="180" height="8" rx="4" fill="#4b5563" opacity="0.5"/>
+  <rect x="680" y="382" width="260" height="8" rx="4" fill="#4b5563" opacity="0.5"/>
+  <rect x="680" y="402" width="300" height="8" rx="4" fill="#2ea043" opacity="0.4"/>
+
+  <!-- Center arrows -->
+  <text x="600" y="325" font-size="32" text-anchor="middle" fill="#cc3333" opacity="0.8">⇄</text>
+
+  <!-- Title -->
+  <text x="600" y="110" font-size="52" font-weight="bold" text-anchor="middle" fill="url(#titleGrad)" font-family="system-ui, -apple-system, sans-serif">QZL Compare</text>
+  <!-- Subtitle -->
+  <text x="600" y="150" font-size="22" text-anchor="middle" fill="#9ca3af" font-family="system-ui, -apple-system, sans-serif">Free Online File, Folder &amp; Text Diff Tool</text>
+
+  <!-- Bottom tags -->
+  <rect x="260" y="500" width="180" height="36" rx="18" fill="#1e242c" stroke="#4b5563"/>
+  <text x="350" y="523" font-size="14" text-anchor="middle" fill="#9ca3af" font-family="system-ui, sans-serif">📄 File Compare</text>
+
+  <rect x="510" y="500" width="180" height="36" rx="18" fill="#1e242c" stroke="#4b5563"/>
+  <text x="600" y="523" font-size="14" text-anchor="middle" fill="#9ca3af" font-family="system-ui, sans-serif">📁 Folder Compare</text>
+
+  <rect x="760" y="500" width="180" height="36" rx="18" fill="#1e242c" stroke="#4b5563"/>
+  <text x="850" y="523" font-size="14" text-anchor="middle" fill="#9ca3af" font-family="system-ui, sans-serif">📝 Text Compare</text>
+
+  <!-- Lock badge -->
+  <text x="600" y="590" font-size="13" text-anchor="middle" fill="#4b5563" font-family="system-ui, sans-serif">🔒 All processing happens locally in your browser · compare.qz-l.com</text>
+
+  <defs>
+    <linearGradient id="titleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#cc3333"/>
+      <stop offset="100%" style="stop-color:#3b82f6"/>
+    </linearGradient>
+  </defs>
+</svg>
