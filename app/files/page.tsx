@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation';
 import type { FileInfo, DiffOp, ToastMessage, ComparisonOptions } from '@/types';
 import { computeLineDiff } from '@/lib/diff';
 import { countLines, formatSize } from '@/lib/formatters';
+import { isMinorDiff } from '@/lib/utils';
 import FileDiffView, { FileDiffViewHandle } from '@/components/FileDiffView';
 import TextCompareView from '@/components/TextCompareView';
 import MenuBar, { type MenuDefinition } from '@/components/MenuBar';
 import LoadingView from '@/components/LoadingView';
 import ToolBtn from '@/components/ToolBtn';
 import Toast from '@/components/Toast';
+import KeyboardShortcutsModal from '@/components/KeyboardShortcutsModal';
 
 type ViewState = 'empty' | 'loading' | 'diff';
 type DiffFilter = 'all' | 'diffs' | 'same' | 'context';
@@ -42,22 +44,12 @@ export default function FileComparePage() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [showOptions, setShowOptions] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   const [fsApiSupported, setFsApiSupported] = useState(false);
   useEffect(() => { setFsApiSupported('showOpenFilePicker' in window); }, []);
 
   const fileDiffRef = useRef<FileDiffViewHandle>(null);
-
-  // ── Minor diff detection ────────────────────────────────────────────────
-  function isMinorDiff(op: DiffOp): boolean {
-    if (op.type === 'equal') return false;
-    if (op.type === 'replace') {
-      return (op.leftLine || '').replace(/\s/g, '') === (op.rightLine || '').replace(/\s/g, '');
-    }
-    if (op.type === 'insert') return (op.rightLine || '').trim() === '';
-    if (op.type === 'delete') return (op.leftLine || '').trim() === '';
-    return false;
-  }
 
   // ── Filtered ops for diff view ──────────────────────────────────────────
   const filteredOps = useMemo(() => {
@@ -145,6 +137,10 @@ export default function FileComparePage() {
       if (e.key === 'End' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); goLastDiff(); }
       if ((e.ctrlKey || e.metaKey) && e.key === 'l') { e.preventDefault(); copyFile('left', 'right'); }
       if ((e.ctrlKey || e.metaKey) && e.key === 'r') { e.preventDefault(); copyFile('right', 'left'); }
+      if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const tag = (e.target as HTMLElement).tagName;
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA') setShowShortcuts(v => !v);
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -156,6 +152,15 @@ export default function FileComparePage() {
     try {
       const [handle] = await window.showOpenFilePicker({ multiple: false });
       const file = await handle.getFile();
+
+      // Warn on large files
+      const MB = 1024 * 1024;
+      if (file.size > 20 * MB) {
+        addToast(`File is ${(file.size / MB).toFixed(1)} MB — very large files may be slow. Loading anyway…`, 'error');
+      } else if (file.size > 5 * MB) {
+        addToast(`File is ${(file.size / MB).toFixed(1)} MB — diff may take a moment`, 'info');
+      }
+
       const content = await file.text();
       const info: FileInfo = { handle, content, name: file.name, size: file.size, lastModified: file.lastModified };
 
@@ -369,7 +374,7 @@ export default function FileComparePage() {
     {
       label: 'Help',
       items: [
-        { label: 'Keyboard Shortcuts', action: () => addToast('F7: Prev diff • F8: Next diff • Ctrl+Home/End: First/Last • Ctrl+L/R: Copy all • Alt+→/←: Copy diff line at cursor', 'info') },
+        { label: 'Keyboard Shortcuts', action: () => setShowShortcuts(true) },
         { separator: true },
         { label: 'About QZL Compare', action: () => setShowAbout(true) },
       ],
@@ -437,6 +442,17 @@ export default function FileComparePage() {
         )}
 
         <div className="flex-1" />
+
+        {/* Help button */}
+        <button
+          onClick={() => setShowShortcuts(true)}
+          title="Keyboard shortcuts (?)"
+          className="w-6 h-6 flex items-center justify-center rounded bg-[#252d37] border border-[#4b5563]/50
+                     text-[#6b7280] hover:text-[#e5e7eb] hover:bg-[#374151] transition-colors text-xs font-bold ml-1"
+          aria-label="Show keyboard shortcuts"
+        >
+          ?
+        </button>
       </div>
 
       {/* Rules panel (flyout) */}
@@ -552,6 +568,9 @@ export default function FileComparePage() {
 
       <Toast toasts={toasts} onRemove={removeToast} />
 
+      {/* Keyboard shortcuts modal */}
+      {showShortcuts && <KeyboardShortcutsModal mode="file" onClose={() => setShowShortcuts(false)} />}
+
       {/* About dialog */}
       {showAbout && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60" onClick={() => setShowAbout(false)}>
@@ -559,8 +578,8 @@ export default function FileComparePage() {
             <div className="text-5xl mb-3">⚖️</div>
             <h2 className="text-xl font-bold text-[#e5e7eb] mb-1">QZL Compare</h2>
             <p className="text-sm text-[#9ca3af] mb-2">Version 0.1.0</p>
-            <p className="text-xs text-[#6b7280] mb-4">Free browser-based file & folder comparison tool.<br/>All processing happens locally.</p>
-            <button onClick={() => setShowAbout(false)} className="btn">Close</button>
+            <p className="text-xs text-[#6b7280] mb-4">Free browser-based file &amp; folder comparison tool.<br/>All processing happens locally — files are never uploaded.</p>
+            <button onClick={() => setShowAbout(false)} className="px-4 py-2 bg-[#cc3333] hover:bg-[#a12828] text-white rounded-lg text-sm font-semibold transition-colors">Close</button>
           </div>
         </div>
       )}

@@ -3,6 +3,7 @@
 import { useRef, useMemo, useCallback, useState, useEffect } from 'react';
 import type { DiffOp } from '@/types';
 import { countLines } from '@/lib/formatters';
+import { diffStats } from '@/lib/utils';
 import DetailedDiffPanel from './DetailedDiffPanel';
 
 const LINE_HEIGHT = 20; // px — must match textarea line-height
@@ -114,6 +115,9 @@ interface InlineDiffEditorProps {
   onLoadLeft?: () => void;
   onLoadRight?: () => void;
   fsApiSupported?: boolean;
+  /** Called when a file is dropped onto a panel (text content of the file) */
+  onDropLeft?: (text: string, fileName: string) => void;
+  onDropRight?: (text: string, fileName: string) => void;
 }
 
 export default function InlineDiffEditor({
@@ -124,6 +128,7 @@ export default function InlineDiffEditor({
   onSaveLeft, onSaveRight,
   onLoadLeft, onLoadRight,
   fsApiSupported = false,
+  onDropLeft, onDropRight,
 }: InlineDiffEditorProps) {
   const leftTextareaRef  = useRef<HTMLTextAreaElement>(null);
   const rightTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -136,6 +141,10 @@ export default function InlineDiffEditor({
 
   const [selectedLineNum, setSelectedLineNum] = useState<number | null>(null);
   const [selectedSide,    setSelectedSide]    = useState<'left' | 'right'>('left');
+  const [leftWordWrap,  setLeftWordWrap]  = useState(false);
+  const [rightWordWrap, setRightWordWrap] = useState(false);
+  // Briefly flash a gutter row index after a copy action for visual feedback
+  const [flashedOpIdx, setFlashedOpIdx] = useState<number | null>(null);
 
   const leftStatus  = useMemo(() => buildLineStatusMap(ops, 'left'),  [ops]);
   const rightStatus = useMemo(() => buildLineStatusMap(ops, 'right'), [ops]);
@@ -207,15 +216,22 @@ export default function InlineDiffEditor({
   }, [syncScrollRefs]);
 
   // ── Copy handlers ────────────────────────────────────────────────────────
-  const handleCopyToRight = useCallback((op: DiffOp) => {
+  const flashOp = useCallback((idx: number) => {
+    setFlashedOpIdx(idx);
+    setTimeout(() => setFlashedOpIdx(null), 600);
+  }, []);
+
+  const handleCopyToRight = useCallback((op: DiffOp, idx?: number) => {
     const newRight = applyOpToRight(op, rightText, ops);
     onRightChange(newRight);
-  }, [rightText, ops, onRightChange]);
+    if (idx !== undefined) flashOp(idx);
+  }, [rightText, ops, onRightChange, flashOp]);
 
-  const handleCopyToLeft = useCallback((op: DiffOp) => {
+  const handleCopyToLeft = useCallback((op: DiffOp, idx?: number) => {
     const newLeft = applyOpToLeft(op, leftText, ops);
     onLeftChange(newLeft);
-  }, [leftText, ops, onLeftChange]);
+    if (idx !== undefined) flashOp(idx);
+  }, [leftText, ops, onLeftChange, flashOp]);
 
   // ── Alt+→ / Alt+← — copy diff op at cursor line ──────────────────────────
   useEffect(() => {
@@ -262,11 +278,52 @@ export default function InlineDiffEditor({
     return () => window.removeEventListener('keydown', handler);
   }, [ops, leftText, rightText, handleCopyToRight, handleCopyToLeft]);
 
-  const showDetail = selectedLineNum !== null && (leftText.length > 0 || rightText.length > 0);
+  const stats = useMemo(() => diffStats(ops), [ops]);
+  const hasAnyContent = leftText.length > 0 || rightText.length > 0;
+  const showDetail = selectedLineNum !== null && hasAnyContent;
 
   return (
     <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-      {/* ── Editor + gutter area ──────────────────────────────────────── */}
+
+      {/* ── Diff stats bar ────────────────────────────────────────────── */}
+      {hasAnyContent && (
+        <div
+          className="flex items-center gap-4 px-3 h-7 bg-[#12161c] border-b border-[#2d333b] shrink-0 text-[11px] select-none"
+          aria-live="polite"
+          aria-label="Diff summary"
+        >
+          {stats.changed === 0 && stats.added === 0 && stats.removed === 0 ? (
+            <span className="text-[#56d364] font-medium flex items-center gap-1">
+              <span aria-hidden="true">✓</span> Files are identical
+            </span>
+          ) : (
+            <>
+              <span className="text-[#6b7280]">Diff:</span>
+              {stats.changed > 0 && (
+                <span className="flex items-center gap-1 text-[#e3b341]">
+                  <span aria-hidden="true">~</span>
+                  <span>{stats.changed} changed</span>
+                </span>
+              )}
+              {stats.added > 0 && (
+                <span className="flex items-center gap-1 text-[#56d364]">
+                  <span aria-hidden="true">+</span>
+                  <span>{stats.added} added</span>
+                </span>
+              )}
+              {stats.removed > 0 && (
+                <span className="flex items-center gap-1 text-[#f85149]">
+                  <span aria-hidden="true">−</span>
+                  <span>{stats.removed} removed</span>
+                </span>
+              )}
+            </>
+          )}
+          <span className="ml-auto text-[#4b5563]">
+            {countLines(leftText)} / {countLines(rightText)} lines
+          </span>
+        </div>
+      )}
       <div
         className="overflow-hidden grid min-h-0"
         style={{
@@ -292,6 +349,9 @@ export default function InlineDiffEditor({
           selectedLineNum={selectedSide === 'left' ? selectedLineNum : null}
           onLineClick={(n) => handleLineClick(n, 'left')}
           onCursorMove={(n) => handleCursorMove(n, 'left')}
+          wordWrap={leftWordWrap}
+          onWordWrapToggle={() => setLeftWordWrap(w => !w)}
+          onDropText={onDropLeft}
         />
 
         {/* ── Gutter (two columns: → left-col, ← right-col) ────────────── */}
@@ -309,18 +369,24 @@ export default function InlineDiffEditor({
                 const top = (lineNum - 1) * LINE_HEIGHT;
                 const canCopyRight = op.type === 'delete' || op.type === 'replace';
                 const canCopyLeft  = op.type === 'insert' || op.type === 'replace';
+                const isFlashed = flashedOpIdx === i;
                 return (
                   <div
                     key={i}
-                    className="absolute left-0 right-0 flex flex-row"
-                    style={{ top, height: LINE_HEIGHT }}
+                    className="absolute left-0 right-0 flex flex-row transition-colors"
+                    style={{
+                      top,
+                      height: LINE_HEIGHT,
+                      background: isFlashed ? 'rgba(86,211,100,0.2)' : 'transparent',
+                    }}
                   >
                     {/* Left column: → copy left→right (blue) */}
                     <div className="flex-1 flex items-center justify-center">
                       {canCopyRight && (
                         <button
-                          onClick={() => handleCopyToRight(op)}
+                          onClick={() => handleCopyToRight(op, i)}
                           title="Copy left → right (Alt+→)"
+                          aria-label="Copy this line from left to right"
                           className="w-6 h-5 flex items-center justify-center rounded
                                      text-[11px] font-bold leading-none
                                      bg-[#0d2137] text-[#58a6ff] border border-[#1f6feb]/60
@@ -335,8 +401,9 @@ export default function InlineDiffEditor({
                     <div className="flex-1 flex items-center justify-center">
                       {canCopyLeft && (
                         <button
-                          onClick={() => handleCopyToLeft(op)}
+                          onClick={() => handleCopyToLeft(op, i)}
                           title="Copy right → left (Alt+←)"
+                          aria-label="Copy this line from right to left"
                           className="w-6 h-5 flex items-center justify-center rounded
                                      text-[11px] font-bold leading-none
                                      bg-[#211800] text-[#e3b341] border border-[#9e6a03]/60
@@ -371,6 +438,9 @@ export default function InlineDiffEditor({
           selectedLineNum={selectedSide === 'right' ? selectedLineNum : null}
           onLineClick={(n) => handleLineClick(n, 'right')}
           onCursorMove={(n) => handleCursorMove(n, 'right')}
+          wordWrap={rightWordWrap}
+          onWordWrapToggle={() => setRightWordWrap(w => !w)}
+          onDropText={onDropRight}
         />
       </div>
 
@@ -420,6 +490,9 @@ interface EditorPanelProps {
   selectedLineNum: number | null;
   onLineClick: (lineNum: number) => void;
   onCursorMove: (lineNum: number) => void;
+  wordWrap: boolean;
+  onWordWrapToggle: () => void;
+  onDropText?: (text: string, fileName: string) => void;
 }
 
 function EditorPanel({
@@ -427,7 +500,9 @@ function EditorPanel({
   onChange, onSave, onLoad, fsApiSupported,
   textareaRef, lineNumRef, highlightRef, onScroll,
   totalLines, selectedLineNum, onLineClick, onCursorMove,
+  wordWrap, onWordWrapToggle, onDropText,
 }: EditorPanelProps) {
+  const [isDragOver, setIsDragOver] = useState(false);
   const lines         = text.split('\n');
   const lineCount     = lines.length;
   const contentH      = Math.max(lineCount, 1) * LINE_HEIGHT;
@@ -437,8 +512,25 @@ function EditorPanel({
   const hasContent    = text.length > 0;
   const changedLines  = Array.from(lineStatus.values()).length;
 
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    const content = await file.text();
+    if (onDropText) onDropText(content, file.name);
+    else onChange(content);
+  }, [onDropText, onChange]);
+
   return (
-    <div className="flex flex-col overflow-hidden bg-[#181d24] min-h-0">
+    <div
+      className={`flex flex-col overflow-hidden bg-[#181d24] min-h-0 transition-colors ${
+        isDragOver ? 'ring-2 ring-inset ring-[#58a6ff] bg-[#0d2137]' : ''
+      }`}
+      onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
+      onDragLeave={() => setIsDragOver(false)}
+      onDrop={handleDrop}
+    >
       {/* Header */}
       <div className="flex items-center gap-1 h-9 px-2 bg-[#1e242c] border-b border-[#4b5563] shrink-0">
         <span className="text-xs font-bold text-[#cc3333] uppercase tracking-wider select-none whitespace-nowrap">
@@ -479,11 +571,33 @@ function EditorPanel({
                          text-[#9ca3af] hover:text-[#f85149] hover:bg-[#3a1e1e] hover:border-[#f85149] transition-colors text-xs"
               title={`Clear ${label}`}>✕</button>
           )}
+          {/* Word wrap toggle */}
+          <button
+            onClick={onWordWrapToggle}
+            title={wordWrap ? 'Disable word wrap' : 'Enable word wrap'}
+            aria-pressed={wordWrap}
+            className={`w-6 h-6 flex items-center justify-center rounded border text-[10px] font-bold transition-colors ${
+              wordWrap
+                ? 'bg-[#1f6feb] text-white border-[#58a6ff]'
+                : 'bg-[#252d37] text-[#6b7280] border-[#4b5563]/50 hover:text-[#e5e7eb] hover:bg-[#374151]'
+            }`}
+          >
+            ↵
+          </button>
         </div>
       </div>
 
       {/* Editor area */}
       <div className="relative flex-1 overflow-hidden">
+        {/* Drag-over overlay */}
+        {isDragOver && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#0d2137]/80 border-2 border-dashed border-[#58a6ff] pointer-events-none rounded">
+            <div className="text-center text-[#58a6ff]">
+              <div className="text-3xl mb-1">📂</div>
+              <p className="text-sm font-semibold">Drop file to load</p>
+            </div>
+          </div>
+        )}
         {/* Line numbers (clickable) */}
         <div
           className="absolute left-0 top-0 bottom-0 overflow-hidden z-10 border-r border-[#4b5563]/60 cursor-pointer"
@@ -505,6 +619,9 @@ function EditorPanel({
                   }`}
                   style={{ height: LINE_HEIGHT, lineHeight: `${LINE_HEIGHT}px`, fontSize: 11, paddingRight: 6 }}
                   title={`Line ${lineNum}${status ? ` (${status})` : ''} — click for detail`}
+                  role="button"
+                  tabIndex={-1}
+                  aria-label={`Line ${lineNum}${status ? `, ${status}` : ''}`}
                 >
                   {lineNum}
                 </div>
@@ -557,6 +674,8 @@ function EditorPanel({
             const ta = e.currentTarget;
             onCursorMove(ta.value.slice(0, ta.selectionStart).split('\n').length);
           }}
+          aria-label={`${label} editor — paste or type text to compare`}
+          aria-multiline="true"
           className="absolute top-0 bottom-0 bg-transparent text-[#e5e7eb] resize-none outline-none
                      focus:ring-0 selection:bg-[#cc3333]/25"
           style={{
@@ -569,16 +688,16 @@ function EditorPanel({
             fontFamily: "'Consolas', 'Monaco', 'Courier New', monospace",
             padding: '0 10px',
             caretColor: '#cc3333',
-            whiteSpace: 'pre',
-            overflowWrap: 'normal',
+            whiteSpace: wordWrap ? 'pre-wrap' : 'pre',
+            overflowWrap: wordWrap ? 'break-word' : 'normal',
             tabSize: 4,
           }}
-          placeholder={`Paste or type ${label.toLowerCase()} text here…`}
+          placeholder={`Paste or type ${label.toLowerCase()} text here… or drag & drop a file`}
           spellCheck={false}
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"
-          wrap="off"
+          wrap={wordWrap ? 'soft' : 'off'}
         />
 
         {/* Empty hint */}
@@ -588,10 +707,11 @@ function EditorPanel({
             style={{ left: LINE_NUM_W }}
           >
             <div className="text-center text-[#4b5563] select-none">
-              <div className="text-2xl mb-1">{side === 'left' ? '📄' : '📋'}</div>
-              <p className="text-xs">
-                {fsApiSupported ? 'Paste text or click 📂 to open a file' : 'Paste or type text here'}
+              <div className="text-2xl mb-2">{side === 'left' ? '📄' : '📋'}</div>
+              <p className="text-xs font-medium mb-1">
+                {fsApiSupported ? 'Click 📂 to open a file' : 'Paste or type text here'}
               </p>
+              <p className="text-[10px] text-[#374151]">or drag &amp; drop a file</p>
             </div>
           </div>
         )}

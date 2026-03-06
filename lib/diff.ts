@@ -7,13 +7,13 @@ import type { DiffOp, InlineDiffOp } from '@/types';
 // ── Constants ──────────────────────────────────────────────────────────────
 
 /** Maximum lines per side for which the O(m×n) LCS table is computed. */
-const MAX_LCS_LINES = 3000;
+const MAX_LCS_LINES = 5000;
 
 /**
  * Maximum product of the two string lengths for which character-level LCS
  * is computed.  Above this threshold the whole line is marked changed.
  */
-const MAX_INLINE_DIFF_COMPLEXITY = 250000;
+const MAX_INLINE_DIFF_COMPLEXITY = 500000;
 
 // ── Line diff ──────────────────────────────────────────────────────────────
 

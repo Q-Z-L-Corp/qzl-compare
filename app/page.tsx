@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import MenuBar, { type MenuDefinition } from '@/components/MenuBar';
@@ -51,6 +51,28 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAbout, setShowAbout] = useState(false);
   const selectedSession = SESSION_TYPES.find(s => s.id === selected);
+
+  // ── Recent sessions (localStorage) ────────────────────────────────────────
+  const [recentIds, setRecentIds] = useState<string[]>([]);
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('qzl-recent-sessions');
+      if (stored) setRecentIds(JSON.parse(stored));
+    } catch { /* ignore */ }
+  }, []);
+
+  const recordRecent = useCallback((id: string) => {
+    setRecentIds(prev => {
+      const next = [id, ...prev.filter(r => r !== id)].slice(0, 5);
+      try { localStorage.setItem('qzl-recent-sessions', JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
+  const recentSessions = useMemo(
+    () => recentIds.map(id => SESSION_TYPES.find(s => s.id === id)).filter(Boolean) as typeof SESSION_TYPES,
+    [recentIds]
+  );
 
   // Filter sessions by search
   const filteredSessions = useMemo(() => {
@@ -129,7 +151,7 @@ export default function HomePage() {
                   <button
                     key={session.id}
                     onClick={() => setSelected(session.id)}
-                    onDoubleClick={() => router.push(session.href)}
+                    onDoubleClick={() => { recordRecent(session.id); router.push(session.href); }}
                     className={`flex items-center gap-2 w-full px-3 py-1.5 text-[13px] text-left rounded-r-md transition-colors ${
                       selected === session.id
                         ? 'bg-[#cc3333]/15 text-[#cc3333] border-l-2 border-[#cc3333] -ml-px'
@@ -146,13 +168,27 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Recent section placeholder */}
+            {/* Recent section */}
             <div className="mb-3">
               <div className="flex items-center gap-1.5 px-2 py-1 text-xs font-semibold text-[#e5e7eb] select-none">
-                <span className="text-[10px] text-[#6b7280]">▸</span>
+                <span className="text-[10px] text-[#6b7280]">{recentSessions.length > 0 ? '▾' : '▸'}</span>
                 <span className="text-[#6b7280]">🕒</span>
                 <span className="text-[#6b7280]">Recent</span>
               </div>
+              {recentSessions.length > 0 && (
+                <div className="ml-3 border-l border-[#4b5563]/30">
+                  {recentSessions.map(session => (
+                    <Link
+                      key={session.id}
+                      href={session.href}
+                      className="flex items-center gap-2 w-full px-3 py-1.5 text-[13px] text-left rounded-r-md transition-colors text-[#9ca3af] hover:bg-[#2f3842] hover:text-[#e5e7eb]"
+                    >
+                      <span>{session.icon}</span>
+                      <span className="truncate">{session.name}</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -198,10 +234,11 @@ export default function HomePage() {
                   <div className="flex gap-3">
                     <Link
                       href={selectedSession.href}
+                      onClick={() => recordRecent(selectedSession.id)}
                       className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg font-bold text-sm text-white transition-all shadow-lg hover:shadow-xl"
                       style={{ background: `linear-gradient(135deg, ${selectedSession.color}, ${selectedSession.color}dd)` }}
                     >
-                      Open
+                      Open {selectedSession.name}
                     </Link>
                   </div>
                 </div>
@@ -229,35 +266,39 @@ export default function HomePage() {
                     href={session.href}
                     className="group flex flex-col items-center gap-3 p-6 rounded-xl bg-[#252d37] border border-[#4b5563]/50 hover:border-[#cc3333]/50 hover:bg-[#2f3842] transition-all hover:shadow-lg hover:shadow-[#cc3333]/5 cursor-pointer"
                     aria-label={`Open ${session.name}`}
+                    onClick={() => recordRecent(session.id)}
                   >
                     <div className="text-5xl group-hover:scale-110 transition-transform" aria-hidden="true">{session.icon}</div>
                     <span className="text-sm font-semibold text-[#e5e7eb] text-center">{session.name}</span>
+                    <span className="text-[11px] text-[#6b7280] text-center leading-snug">{session.description.split('.')[0]}</span>
                   </Link>
                 ))}
               </div>
 
-              {/* SEO feature highlights */}
-              <section className="mt-10 max-w-2xl w-full" aria-label="Features">
-                <h2 className="sr-only">Why use QZL Compare?</h2>
+              {/* Feature highlights (visible for users + SEO) */}
+              <section className="mt-8 max-w-2xl w-full" aria-labelledby="features-heading">
+                <h2 id="features-heading" className="text-xs font-bold text-[#4b5563] uppercase tracking-widest text-center mb-3">
+                  Why QZL Compare?
+                </h2>
                 <ul className="grid grid-cols-2 gap-3 text-xs text-[#6b7280]">
-                  <li className="flex items-start gap-2">
-                    <span aria-hidden="true">🔒</span>
+                  <li className="flex items-start gap-2 p-2.5 bg-[#1e242c] rounded-lg border border-[#2d333b]">
+                    <span aria-hidden="true" className="text-base shrink-0">🔒</span>
                     <span><strong className="text-[#9ca3af]">100% private</strong> — all processing happens locally in your browser, files are never uploaded</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <span aria-hidden="true">⚡</span>
+                  <li className="flex items-start gap-2 p-2.5 bg-[#1e242c] rounded-lg border border-[#2d333b]">
+                    <span aria-hidden="true" className="text-base shrink-0">⚡</span>
                     <span><strong className="text-[#9ca3af]">Instant file difference checker</strong> — line-level diffs with character-level highlights</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <span aria-hidden="true">📁</span>
+                  <li className="flex items-start gap-2 p-2.5 bg-[#1e242c] rounded-lg border border-[#2d333b]">
+                    <span aria-hidden="true" className="text-base shrink-0">📁</span>
                     <span><strong className="text-[#9ca3af]">Compare folders online</strong> — detect added, removed, and modified files across entire directories</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <span aria-hidden="true">📝</span>
+                  <li className="flex items-start gap-2 p-2.5 bg-[#1e242c] rounded-lg border border-[#2d333b]">
+                    <span aria-hidden="true" className="text-base shrink-0">📝</span>
                     <span><strong className="text-[#9ca3af]">Text diff tool</strong> — paste text directly to see real-time differences, no file needed</span>
                   </li>
                 </ul>
-                <p className="mt-4 text-[11px] text-[#4b5563] text-center">
+                <p className="mt-3 text-[11px] text-[#4b5563] text-center">
                   💡 Use Chrome, Edge, or Chromium for full File System Access API features
                 </p>
               </section>
@@ -281,9 +322,18 @@ export default function HomePage() {
           <div className="bg-[#252d37] border border-[#4b5563] rounded-xl shadow-2xl p-6 max-w-sm text-center" onClick={e => e.stopPropagation()}>
             <div className="text-5xl mb-3">⚖️</div>
             <h2 className="text-xl font-bold text-[#e5e7eb] mb-1">QZL Compare</h2>
-            <p className="text-sm text-[#9ca3af] mb-2">Version 0.1.0</p>
-            <p className="text-xs text-[#6b7280] mb-4">Free browser-based file & folder comparison tool.<br/>All processing happens locally in your browser.</p>
-            <button onClick={() => setShowAbout(false)} className="btn">Close</button>
+            <p className="text-sm text-[#9ca3af] mb-3">Version 0.1.0 — Free &amp; Open</p>
+            <p className="text-xs text-[#6b7280] mb-4 leading-relaxed">
+              Browser-based file, folder &amp; text comparison tool.<br/>
+              All processing happens locally — <strong className="text-[#9ca3af]">files are never uploaded</strong>.<br/>
+              No install, no account required.
+            </p>
+            <button
+              onClick={() => setShowAbout(false)}
+              className="px-6 py-2 bg-[#cc3333] hover:bg-[#a12828] text-white rounded-lg text-sm font-semibold transition-colors"
+            >
+              Close
+            </button>
           </div>
         </div>
       )}

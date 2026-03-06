@@ -77,7 +77,8 @@ const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebApplication',
   name: 'Online File & Folder Compare Tool',
-  description: 'Compare folders, files, and text online instantly',
+  alternateName: 'QZL Compare',
+  description: 'Compare folders, files, and text online instantly — free, private, no install required.',
   url: BASE_URL,
   applicationCategory: 'DeveloperApplication',
   operatingSystem: 'Any',
@@ -89,10 +90,20 @@ const jsonLd = {
   },
   featureList: [
     'Compare two folders side by side',
-    'File line-by-line diff with syntax highlighting',
-    'Real-time text comparison',
-    'All processing in browser — no file upload required',
+    'Line-by-line file diff with character-level highlights',
+    'Real-time text comparison with inline editing',
+    'Gutter copy buttons to sync changes left and right',
+    'All processing in browser — files are never uploaded',
+    'No install, no signup required',
   ],
+};
+
+const websiteLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'QZL Compare',
+  url: BASE_URL,
+  description: 'Free online diff tool — compare files, folders, and text in your browser.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -102,6 +113,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteLd) }}
         />
       </head>
       <body className="h-full bg-[#12161c] text-[#e5e7eb] antialiased selection:bg-[#cc3333] selection:text-white overflow-hidden">
