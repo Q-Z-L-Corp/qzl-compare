@@ -1,16 +1,18 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { AppMode, FileInfo, DirInfo, DiffOp, FolderItem, ToastMessage, ComparisonOptions } from '@/types';
-import { computeLineDiff } from '@/lib/diff';
+import type { AppMode, FileInfo, DirInfo, DiffOp, FolderItem, ToastMessage, ComparisonOptions, DiffViewMode } from '@/types';
+import { generateUnifiedPatch } from '@/lib/patchExport';
+import { useDiffWorker } from '@/lib/useDiffWorker';
 import { countLines, formatSize } from '@/lib/formatters';
-import { buildFolderItems } from '@/lib/fsUtils';
+import { buildFolderItems, isBinaryFile, FILE_WARN_SIZE, FILE_MAX_SIZE } from '@/lib/fsUtils';
 
 import Toolbar from './Toolbar';
 import PanelBar from './PanelBar';
 import WelcomeScreen from './WelcomeScreen';
 import LoadingView from './LoadingView';
 import FileDiffView, { FileDiffViewHandle } from './FileDiffView';
+import UnifiedDiffView, { UnifiedDiffViewHandle } from './UnifiedDiffView';
 import FolderView from './FolderView';
 import TextCompareView from './TextCompareView';
 import StatusBar from './StatusBar';
@@ -26,6 +28,7 @@ let toastId = 0;
 export default function CompareApp() {
   const [mode, setMode] = useState<AppMode>('file');
   const [view, setView] = useState<ViewState>('welcome');
+  const [loadingMsg, setLoadingMsg] = useState<string>('Comparing…');
 
   const [leftFile,  setLeftFile]  = useState<FileInfo | null>(null);
   const [rightFile, setRightFile] = useState<FileInfo | null>(null);
@@ -60,7 +63,19 @@ export default function CompareApp() {
     setFsApiSupported('showOpenFilePicker' in window);
   }, []);
 
-  const fileDiffRef = useRef<FileDiffViewHandle>(null);
+  const { computeAsync } = useDiffWorker();
+
+  const [diffViewMode, setDiffViewMode] = useState<DiffViewMode>('side-by-side');
+  const fileDiffRef    = useRef<FileDiffViewHandle>(null);
+  const unifiedDiffRef = useRef<UnifiedDiffViewHandle>(null);
+
+  function scrollToDiff(idx: number) {
+    if (diffViewMode === 'unified') {
+      unifiedDiffRef.current?.scrollToDiff(idx);
+    } else {
+      scrollToDiff(idx);
+    }
+  }
 
   // ── Toast helpers ─────────────────────────────────────────────────────────
   const addToast = useCallback((message: string, type: ToastMessage['type'] = 'info') => {
@@ -78,7 +93,7 @@ export default function CompareApp() {
       const next = direction === 1
         ? (prev >= diffCount - 1 ? 0 : prev + 1)
         : (prev <= 0 ? diffCount - 1 : prev - 1);
-      fileDiffRef.current?.scrollToDiff(next);
+      scrollToDiff(next);
       return next;
     });
   }, [diffCount]);
@@ -86,14 +101,14 @@ export default function CompareApp() {
   const goFirstDiff = useCallback(() => {
     if (diffCount === 0) return;
     setCurrentDiff(0);
-    fileDiffRef.current?.scrollToDiff(0);
+    scrollToDiff(0);
   }, [diffCount]);
 
   const goLastDiff = useCallback(() => {
     if (diffCount === 0) return;
     const last = diffCount - 1;
     setCurrentDiff(last);
-    fileDiffRef.current?.scrollToDiff(last);
+    scrollToDiff(last);
   }, [diffCount]);
 
   // ── Keyboard shortcuts ────────────────────────────────────────────────────
@@ -119,6 +134,22 @@ export default function CompareApp() {
     try {
       const [handle] = await window.showOpenFilePicker({ multiple: false });
       const file    = await handle.getFile();
+
+      // Size guard
+      if (file.size > FILE_MAX_SIZE) {
+        addToast(`"${file.name}" is too large to diff (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum is 20 MB.`, 'error');
+        return;
+      }
+      if (file.size > FILE_WARN_SIZE) {
+        addToast(`"${file.name}" is large (${(file.size / 1024 / 1024).toFixed(1)} MB). Diffing may be slow.`, 'info');
+      }
+
+      // Binary guard
+      if (await isBinaryFile(file)) {
+        addToast(`"${file.name}" appears to be a binary file and cannot be text-diffed.`, 'error');
+        return;
+      }
+
       const content = await file.text();
       const info: FileInfo = { handle, content, name: file.name, size: file.size };
 
@@ -169,9 +200,10 @@ export default function CompareApp() {
 
   // ── Compute & render file diff ────────────────────────────────────────────
   async function runFileDiff(left: FileInfo, right: FileInfo) {
+    setLoadingMsg('Comparing files…');
     setView('loading');
     await tick();
-    const ops   = computeLineDiff(left.content, right.content);
+    const ops   = await computeAsync(left.content, right.content, comparisonOptions);
     const diffs = ops.filter(op => op.type !== 'equal').length;
     setDiffOps(ops);
     setCurrentDiff(-1);
@@ -181,13 +213,14 @@ export default function CompareApp() {
     if (diffs > 0) {
       setTimeout(() => {
         setCurrentDiff(0);
-        fileDiffRef.current?.scrollToDiff(0);
+        scrollToDiff(0);
       }, 50);
     }
   }
 
   // ── Compute & render folder diff ──────────────────────────────────────────
   async function runFolderDiff(left: DirInfo, right: DirInfo) {
+    setLoadingMsg('Scanning folders…');
     setView('loading');
     await tick();
     try {
@@ -220,7 +253,7 @@ export default function CompareApp() {
     );
   }
 
-  function runTextDiff(left: string, right: string) {
+  async function runTextDiff(left: string, right: string) {
     if (!left && !right) {
       setDiffOps([]);
       setDiffCount(0);
@@ -230,7 +263,7 @@ export default function CompareApp() {
       setStatusRight('');
       return;
     }
-    const ops   = computeLineDiff(left, right);
+    const ops   = await computeAsync(left, right, comparisonOptions);
     const diffs = ops.filter(op => op.type !== 'equal').length;
     setDiffOps(ops);
     setCurrentDiff(-1);
@@ -240,7 +273,7 @@ export default function CompareApp() {
     if (diffs > 0) {
       setTimeout(() => {
         setCurrentDiff(0);
-        fileDiffRef.current?.scrollToDiff(0);
+        scrollToDiff(0);
       }, 50);
     }
   }
@@ -275,6 +308,32 @@ export default function CompareApp() {
       if (err instanceof Error && err.name !== 'AbortError') {
         addToast('Could not load file: ' + err.message, 'error');
       }
+    }
+  }
+
+  // ── Handle file dropped onto PanelBar ────────────────────────────────────
+  async function handleDroppedFile(side: 'left' | 'right', content: string, name: string, size: number) {
+    if (mode !== 'file') return;
+
+    // Warn on large drops (content already read by PanelBar)
+    if (size > FILE_WARN_SIZE) {
+      addToast(`"${name}" is large (${(size / 1024 / 1024).toFixed(1)} MB). Display may be slow.`, 'info');
+    }
+
+    // Create a synthetic FileInfo (no handle — dropped files can't be written back via FS API)
+    const info: FileInfo = { handle: null as unknown as FileSystemFileHandle, content, name, size };
+
+    let newLeft  = leftFile;
+    let newRight = rightFile;
+    if (side === 'left')  { setLeftFile(info);  newLeft  = info; }
+    else                  { setRightFile(info); newRight = info; }
+
+    setFromFolderView(false);
+    if (newLeft && newRight) {
+      await runFileDiff(newLeft, newRight);
+    } else {
+      setView('welcome');
+      setStatusMsg(`Loaded: ${name}`);
     }
   }
 
@@ -315,7 +374,24 @@ export default function CompareApp() {
 
     setView('loading');
     await tick();
-    const [lFile, rFile]       = await Promise.all([item.leftHandle.getFile(), item.rightHandle.getFile()]);
+    const [lFile, rFile] = await Promise.all([item.leftHandle.getFile(), item.rightHandle.getFile()]);
+
+    // Size guard
+    if (lFile.size > FILE_MAX_SIZE || rFile.size > FILE_MAX_SIZE) {
+      const name = lFile.size > FILE_MAX_SIZE ? lFile.name : rFile.name;
+      addToast(`"${name}" exceeds the 20 MB limit and cannot be diffed.`, 'error');
+      setView('folder');
+      return;
+    }
+
+    // Binary guard
+    const [lBin, rBin] = await Promise.all([isBinaryFile(lFile), isBinaryFile(rFile)]);
+    if (lBin || rBin) {
+      addToast(`"${path}" appears to be a binary file and cannot be text-diffed.`, 'error');
+      setView('folder');
+      return;
+    }
+
     const [lContent, rContent] = await Promise.all([lFile.text(), rFile.text()]);
 
     const newLeft:  FileInfo = { handle: item.leftHandle,  content: lContent, name: `${leftDir.name}/${path}`,  size: lFile.size };
@@ -391,6 +467,36 @@ export default function CompareApp() {
     else                 openFolder(side);
   }
 
+  // ── Export diff as unified patch ──────────────────────────────────────────
+  function handleExportPatch() {
+    if (diffOps.length === 0 || diffCount === 0) return;
+    const leftName  = (mode === 'file' ? leftFile?.name  : undefined) ?? 'left';
+    const rightName = (mode === 'file' ? rightFile?.name : undefined) ?? 'right';
+    const patch = generateUnifiedPatch(diffOps, leftName, rightName);
+    const blob  = new Blob([patch], { type: 'text/plain' });
+    const url   = URL.createObjectURL(blob);
+    const a     = document.createElement('a');
+    a.href     = url;
+    a.download = `${leftName.replace(/[^a-zA-Z0-9._-]/g, '_')}.patch`;
+    a.click();
+    URL.revokeObjectURL(url);
+    addToast('Patch file downloaded', 'success');
+  }
+
+  // ── Copy diff to clipboard ────────────────────────────────────────────────
+  async function handleCopyDiff() {
+    if (diffOps.length === 0 || diffCount === 0) return;
+    const leftName  = (mode === 'file' ? leftFile?.name  : undefined) ?? 'left';
+    const rightName = (mode === 'file' ? rightFile?.name : undefined) ?? 'right';
+    const patch = generateUnifiedPatch(diffOps, leftName, rightName);
+    try {
+      await navigator.clipboard.writeText(patch);
+      addToast('Diff copied to clipboard', 'success');
+    } catch {
+      addToast('Could not access clipboard', 'error');
+    }
+  }
+
   // ── Derived display values ────────────────────────────────────────────────
   const leftPath  = mode === 'file' ? (leftFile?.name  ?? '') : (leftDir?.name  ?? '');
   const rightPath = mode === 'file' ? (rightFile?.name ?? '') : (rightDir?.name ?? '');
@@ -399,6 +505,7 @@ export default function CompareApp() {
   const rightMeta = mode === 'file' && rightFile ? formatSize(rightFile.size) : undefined;
 
   const showSync = mode === 'file' && !!leftFile && !!rightFile && !fromFolderView;
+  const showExport = diffCount > 0 && (mode === 'file' || mode === 'text');
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -418,6 +525,10 @@ export default function CompareApp() {
         onBack={handleBackToFolder}
         comparisonOptions={comparisonOptions}
         onComparisonOptionsChange={setComparisonOptions}
+        onExportPatch={showExport ? handleExportPatch : undefined}
+        onCopyDiff={showExport ? handleCopyDiff : undefined}
+        diffViewMode={view === 'diff' ? diffViewMode : undefined}
+        onToggleDiffViewMode={view === 'diff' ? () => setDiffViewMode(m => m === 'side-by-side' ? 'unified' : 'side-by-side') : undefined}
       />
 
       {/* PanelBar: hidden in text mode (TextCompareView has its own headers) */}
@@ -430,6 +541,8 @@ export default function CompareApp() {
           onOpenLeft={() => handleOpen('left')}
           onOpenRight={() => handleOpen('right')}
           openLabel={mode === 'file' ? 'File' : 'Folder'}
+          onDropLeft={mode === 'file'  ? (c, n, s) => handleDroppedFile('left',  c, n, s) : undefined}
+          onDropRight={mode === 'file' ? (c, n, s) => handleDroppedFile('right', c, n, s) : undefined}
         />
       )}
 
@@ -463,10 +576,17 @@ export default function CompareApp() {
                 fsApiSupported={fsApiSupported}
               />
             )}
-            {view === 'loading' && <LoadingView />}
-            {view === 'diff' && (
+            {view === 'loading' && <LoadingView message={loadingMsg} />}
+            {view === 'diff' && diffViewMode === 'side-by-side' && (
               <FileDiffView
                 ref={fileDiffRef}
+                ops={diffOps}
+                onDiffElementsChange={setDiffCount}
+              />
+            )}
+            {view === 'diff' && diffViewMode === 'unified' && (
+              <UnifiedDiffView
+                ref={unifiedDiffRef}
                 ops={diffOps}
                 onDiffElementsChange={setDiffCount}
               />

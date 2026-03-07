@@ -158,3 +158,58 @@
   to   { opacity: 0; transform: translateX(-50%) translateY(12px); }
 }
 .toast-animate { animation: toast-in 0.3s ease-out; }
+
+/* ── Unified diff view ── */
+.unified-row {
+  display: grid;
+  grid-template-columns: 46px 46px 20px 1fr;
+  min-height: 20px;
+  border-bottom: 1px solid rgba(75,85,99,0.1);
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 20px;
+}
+.unified-row.current-diff { outline: 2px solid var(--bc-red); outline-offset: -2px; background: rgba(204,51,51,0.08); }
+
+.unified-eq  { background: transparent; }
+.unified-ins { background: var(--diff-ins-bg); }
+.unified-del { background: var(--diff-del-bg); }
+
+.unified-lnum,
+.unified-rnum {
+  padding: 0 4px 0 2px;
+  text-align: right;
+  color: var(--bc-text-muted);
+  background: var(--bc-bg-elevated);
+  border-right: 1px solid var(--bc-border);
+  user-select: none;
+  font-size: 11px;
+  line-height: 20px;
+}
+.unified-ins .unified-lnum,
+.unified-ins .unified-rnum { background: var(--diff-ins-num); border-right-color: var(--diff-ins-border); }
+.unified-del .unified-lnum,
+.unified-del .unified-rnum { background: var(--diff-del-num); border-right-color: var(--diff-del-border); }
+
+.unified-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  user-select: none;
+  border-right: 1px solid var(--bc-border);
+}
+.unified-ins .unified-marker { color: var(--diff-ins-border); background: var(--diff-ins-num); }
+.unified-del .unified-marker { color: var(--diff-del-border); background: var(--diff-del-num); }
+.unified-eq  .unified-marker { color: var(--bc-text-muted);   background: var(--bc-bg-elevated); }
+
+.unified-content {
+  padding: 0 8px;
+  white-space: pre;
+  overflow: visible;
+  color: var(--bc-text-primary);
+  line-height: 20px;
+  tab-size: 4;
+}
+

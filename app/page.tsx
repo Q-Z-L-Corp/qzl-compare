@@ -297,10 +297,48 @@ export default function HomePage() {
                     <span aria-hidden="true" className="text-base shrink-0">📝</span>
                     <span><strong className="text-[#9ca3af]">Text diff tool</strong> — paste text directly to see real-time differences, no file needed</span>
                   </li>
+                  <li className="flex items-start gap-2 p-2.5 bg-[#1e242c] rounded-lg border border-[#2d333b]">
+                    <span aria-hidden="true" className="text-base shrink-0">⇔</span>
+                    <span><strong className="text-[#9ca3af]">Side-by-side &amp; unified views</strong> — switch between layouts with one click</span>
+                  </li>
+                  <li className="flex items-start gap-2 p-2.5 bg-[#1e242c] rounded-lg border border-[#2d333b]">
+                    <span aria-hidden="true" className="text-base shrink-0">⬇</span>
+                    <span><strong className="text-[#9ca3af]">Export as patch file</strong> — download a standard <code className="text-[#cc3333]">.patch</code> / unified diff for version control</span>
+                  </li>
                 </ul>
                 <p className="mt-3 text-[11px] text-[#4b5563] text-center">
                   💡 Use Chrome, Edge, or Chromium for full File System Access API features
                 </p>
+              </section>
+
+              {/* Hidden rich SEO copy — visible to crawlers, styled to not dominate UI */}
+              <section className="sr-only" aria-label="About QZL Compare">
+                <h2>Free Online File &amp; Folder Comparison Tool — QZL Compare</h2>
+                <p>
+                  QZL Compare is a free, browser-based alternative to Beyond Compare. Use it to
+                  <strong> compare files online</strong>, <strong>compare folders online</strong>,
+                  run a <strong>text diff tool</strong>, or check a
+                  <strong> file difference</strong> — all without installing anything or uploading
+                  your data. Every comparison runs locally in your browser.
+                </p>
+                <h3>Key Features</h3>
+                <ul>
+                  <li>Side-by-side file diff with character-level inline highlighting</li>
+                  <li>Recursive folder comparison — find added, removed, and modified files</li>
+                  <li>Real-time text diff — paste any two strings and see differences instantly</li>
+                  <li>Unified diff view compatible with standard patch format</li>
+                  <li>Export diff as a <code>.patch</code> file for version control workflows</li>
+                  <li>Ignore whitespace, case sensitivity, and CRLF/LF line endings</li>
+                  <li>100% private — no server uploads, no account required, no tracking</li>
+                  <li>Works on Windows, macOS, and Linux in Chrome, Edge, and Opera</li>
+                </ul>
+                <h3>Use Cases</h3>
+                <ul>
+                  <li>Developers reviewing code changes without a desktop diff tool</li>
+                  <li>DevOps engineers comparing configuration files across environments</li>
+                  <li>Technical writers spotting changes between document versions</li>
+                  <li>Students comparing submitted code against reference solutions</li>
+                </ul>
               </section>
             </div>
           )}

@@ -46,6 +46,7 @@ export interface FolderItem {
 }
 
 export type AppMode = 'file' | 'folder' | 'text';
+export type DiffViewMode = 'side-by-side' | 'unified';
 
 export type FolderFilter = 'all' | FolderItemStatus;
 

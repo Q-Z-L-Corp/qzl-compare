@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { AppMode, ComparisonOptions } from '@/types';
+import type { AppMode, ComparisonOptions, DiffViewMode } from '@/types';
 
 interface ToolbarProps {
   mode: AppMode;
@@ -19,6 +19,14 @@ interface ToolbarProps {
   onBack: () => void;
   comparisonOptions: ComparisonOptions;
   onComparisonOptionsChange: (opts: ComparisonOptions) => void;
+  /** Called to export the current diff as a unified patch file */
+  onExportPatch?: () => void;
+  /** Called to copy the current diff as unified patch text to clipboard */
+  onCopyDiff?: () => void;
+  /** Current diff view mode */
+  diffViewMode?: DiffViewMode;
+  /** Called when user toggles the diff view mode */
+  onToggleDiffViewMode?: () => void;
 }
 
 export default function Toolbar({
@@ -30,6 +38,10 @@ export default function Toolbar({
   showBackButton, onBack,
   comparisonOptions,
   onComparisonOptionsChange,
+  onExportPatch,
+  onCopyDiff,
+  diffViewMode,
+  onToggleDiffViewMode,
 }: ToolbarProps) {
   const [showOptions, setShowOptions] = useState(false);
   const hasDiffs = diffCount > 0;
@@ -124,6 +136,47 @@ export default function Toolbar({
             >
               Left 📥
             </button>
+          </div>
+          <div className="w-px h-7 bg-[#4b5563]/50" />
+        </>
+      )}
+
+      {/* View mode toggle: side-by-side / unified */}
+      {hasDiffs && onToggleDiffViewMode && (
+        <>
+          <button
+            onClick={onToggleDiffViewMode}
+            className="btn btn-sm bg-[#252d37] hover:bg-[#374151] text-xs gap-1"
+            title={diffViewMode === 'unified' ? 'Switch to side-by-side view' : 'Switch to unified view'}
+          >
+            {diffViewMode === 'unified' ? '⇔ Side-by-Side' : '≡ Unified'}
+          </button>
+          <div className="w-px h-7 bg-[#4b5563]/50" />
+        </>
+      )}
+
+      {/* Export patch / Copy diff — visible when there are diffs */}
+      {hasDiffs && (onExportPatch || onCopyDiff) && (
+        <>
+          <div className="flex gap-1">
+            {onCopyDiff && (
+              <button
+                onClick={onCopyDiff}
+                className="btn btn-sm bg-[#252d37] hover:bg-[#374151] text-xs gap-1"
+                title="Copy diff as unified patch to clipboard"
+              >
+                📋 Copy Diff
+              </button>
+            )}
+            {onExportPatch && (
+              <button
+                onClick={onExportPatch}
+                className="btn btn-sm bg-[#252d37] hover:bg-[#374151] text-xs gap-1"
+                title="Export diff as .patch file"
+              >
+                ⬇ Export Patch
+              </button>
+            )}
           </div>
           <div className="w-px h-7 bg-[#4b5563]/50" />
         </>

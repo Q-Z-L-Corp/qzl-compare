@@ -4,6 +4,37 @@
 
 import type { FolderItem, FolderTreeNode, FolderItemStatus, FileFilterConfig } from '@/types';
 
+// ── File safety helpers ────────────────────────────────────────────────────
+
+/** Files larger than this are shown a warning before diffing. */
+export const FILE_WARN_SIZE  = 5   * 1024 * 1024; // 5 MB
+/** Files larger than this are refused to prevent tab freeze. */
+export const FILE_MAX_SIZE   = 20  * 1024 * 1024; // 20 MB
+/** Sample this many bytes to detect binary content. */
+const BINARY_SAMPLE_BYTES = 8000;
+
+/**
+ * Returns true if the file appears to be binary.
+ * Reads the first BINARY_SAMPLE_BYTES bytes and checks for null bytes
+ * or a high density of non-printable ASCII characters.
+ */
+export async function isBinaryFile(file: File): Promise<boolean> {
+  const sampleSize = Math.min(file.size, BINARY_SAMPLE_BYTES);
+  if (sampleSize === 0) return false;
+  const buffer = await file.slice(0, sampleSize).arrayBuffer();
+  const bytes  = new Uint8Array(buffer);
+  let nonPrintable = 0;
+  for (let i = 0; i < bytes.length; i++) {
+    const b = bytes[i];
+    // Null byte is a definitive binary indicator
+    if (b === 0) return true;
+    // Count control characters (excluding common text ones: tab, LF, CR, FF)
+    if (b < 9 || (b > 13 && b < 32) || b === 127) nonPrintable++;
+  }
+  // If more than 10% non-printable, treat as binary
+  return nonPrintable / bytes.length > 0.1;
+}
+
 /**
  * Directory names that are always skipped during folder comparison.
  */
@@ -118,6 +149,9 @@ export async function listChildren(
         let status: FolderItemStatus;
         if (lFile.size !== rFile.size) {
           status = 'different';
+        } else if (lFile.size > FILE_MAX_SIZE || await isBinaryFile(lFile)) {
+          // Binary/oversized: sizes are equal so treat as same
+          status = 'same';
         } else {
           const [lContent, rContent] = await Promise.all([lFile.text(), rFile.text()]);
           status = lContent === rContent ? 'same' : 'different';
@@ -261,6 +295,9 @@ export async function buildFolderItems(
       let status: FolderItem['status'];
       if (lFile.size !== rFile.size) {
         status = 'different';
+      } else if (lFile.size > FILE_MAX_SIZE || await isBinaryFile(lFile)) {
+        // For binary or oversized files, compare by size only (already equal here)
+        status = 'same';
       } else {
         const [lContent, rContent] = await Promise.all([lFile.text(), rFile.text()]);
         status = lContent === rContent ? 'same' : 'different';
