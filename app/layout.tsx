@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import FeedbackWidget from '@/components/FeedbackWidget';
 
 const BASE_URL = 'https://compare.qz-l.com';
 
@@ -121,6 +122,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="h-full bg-[#12161c] text-[#e5e7eb] antialiased selection:bg-[#cc3333] selection:text-white overflow-hidden">
         {children}
+        <FeedbackWidget />
       </body>
     </html>
   );
