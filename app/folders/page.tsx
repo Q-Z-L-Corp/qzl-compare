@@ -1,155 +1,183 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { FileInfo, DirInfo, DiffOp, FolderTreeNode, ToastMessage, FileFilterConfig } from '@/types';
-import { computeLineDiff } from '@/lib/diff';
-import { countLines, formatSize, getFileIcon } from '@/lib/formatters';
-import { listChildren, expandAllRecursive } from '@/lib/fsUtils';
-import FileDiffView, { FileDiffViewHandle } from '@/components/FileDiffView';
-import TextCompareView from '@/components/TextCompareView';
+import { List, type RowComponentProps } from 'react-window';
+import type { ComparisonOptions, DiffOp, DirInfo, FileInfo, FileFilterConfig, FolderTreeNode, ToastMessage } from '@/types';
+import { countLines, getFileIcon } from '@/lib/formatters';
+import { listChildren } from '@/lib/fsUtils';
+import { useDiff } from '@/hooks/useDiff';
+import { useFolderCompare } from '@/hooks/useFolderCompare';
+import { useTabs, type CompareTab } from '@/hooks/useTabs';
 import MenuBar, { type MenuDefinition } from '@/components/MenuBar';
-import LoadingView from '@/components/LoadingView';
 import ToolBtn from '@/components/ToolBtn';
+import LoadingView from '@/components/LoadingView';
+import TextCompareView from '@/components/TextCompareView';
 import Toast from '@/components/Toast';
+import TabBar from '@/components/TabBar';
+import TabContent from '@/components/TabContent';
 
-type ViewState = 'empty' | 'loading' | 'folder' | 'file-diff';
+type SortBy = 'name' | 'size' | 'modified';
+type SortOrder = 'asc' | 'desc';
+type StatusFilter = 'all' | 'different' | 'left-only' | 'right-only' | 'same';
+
+interface FolderTabData {
+  scopePath?: string;
+}
+
+interface FileTabData {
+  leftFile: FileInfo;
+  rightFile: FileInfo;
+  diffOps: DiffOp[];
+  diffCount: number;
+}
+
+type WorkspaceTabData = FolderTabData | FileTabData;
+
+interface FileCandidate {
+  path: string;
+  handle: FileSystemFileHandle;
+}
 
 let toastId = 0;
+const ROW_HEIGHT = 30;
 
 export default function FolderComparePage() {
   const router = useRouter();
-  const [view, setView] = useState<ViewState>('empty');
+  const { computeDiff } = useDiff();
+  const { scanFolders } = useFolderCompare();
 
   const [leftDir, setLeftDir] = useState<DirInfo | null>(null);
   const [rightDir, setRightDir] = useState<DirInfo | null>(null);
-
-  // Tree state
   const [treeNodes, setTreeNodes] = useState<FolderTreeNode[]>([]);
   const [ignoredDirNames, setIgnoredDirNames] = useState<string[]>([]);
-  const [expandAll, setExpandAll] = useState(false);
-
-  // Filter state
-  const [filterConfig, setFilterConfig] = useState<FileFilterConfig>({ includePatterns: '', excludePatterns: '' });
-  const [showFilterDialog, setShowFilterDialog] = useState(false);
-  const [showFilterBar, setShowFilterBar] = useState(false);
-  const [filterStatusFilter, setFilterStatusFilter] = useState<'all' | 'different' | 'left-only' | 'right-only' | 'same'>('all');
-  const [selectMode, setSelectMode] = useState(false);
-  const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [filesOnlyMode, setFilesOnlyMode] = useState(false);
-
-  // File drill-down state
-  const [leftFile, setLeftFile] = useState<FileInfo | null>(null);
-  const [rightFile, setRightFile] = useState<FileInfo | null>(null);
-  const [diffOps, setDiffOps] = useState<DiffOp[]>([]);
-  const [diffCount, setDiffCount] = useState(0);
-  const [currentDiff, setCurrentDiff] = useState(-1);
-
-  const [statusMsg, setStatusMsg] = useState('Ready — select two folders to compare');
+  const [sortBy, setSortBy] = useState<SortBy>('name');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [loadingMsg, setLoadingMsg] = useState('Scanning folders…');
+  const [isLoading, setIsLoading] = useState(false);
+  const [statusMsg, setStatusMsg] = useState('Ready — select folders to compare');
   const [statusRight, setStatusRight] = useState('');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [showAbout, setShowAbout] = useState(false);
-
   const [fsApiSupported, setFsApiSupported] = useState(false);
-  useEffect(() => { setFsApiSupported('showOpenFilePicker' in window); }, []);
+  const [filterConfig, setFilterConfig] = useState<FileFilterConfig>({ includePatterns: '', excludePatterns: '' });
+  const [showFilterDialog, setShowFilterDialog] = useState(false);
 
-  const fileDiffRef = useRef<FileDiffViewHandle>(null);
+  const [selectedLeftCandidate, setSelectedLeftCandidate] = useState<FileCandidate | null>(null);
+  const [selectedRightCandidate, setSelectedRightCandidate] = useState<FileCandidate | null>(null);
 
-  // ── Toast helpers
+  const comparisonOptions = useMemo<ComparisonOptions>(() => ({
+    ignoreWhitespace: 'none',
+    caseSensitive: true,
+    ignoreLineEndings: false,
+    showLineNumbers: true,
+  }), []);
+
+  const {
+    tabs,
+    activeTab,
+    activeTabId,
+    setActiveTabId,
+    openTab,
+    closeTab,
+    updateTab,
+    activateNext,
+    activatePrevious,
+  } = useTabs<WorkspaceTabData>({
+    initialTabs: [{ id: 'folder:root', title: 'Folder Compare', type: 'folder', closable: false, data: { scopePath: '' } }],
+    initialActiveId: 'folder:root',
+    persistKey: 'qzl-folder-workspace-tabs',
+  });
+
+  useEffect(() => {
+    setFsApiSupported('showDirectoryPicker' in window);
+  }, []);
+
   const addToast = useCallback((message: string, type: ToastMessage['type'] = 'info') => {
     setToasts(prev => [...prev, { id: ++toastId, message, type }]);
   }, []);
+
   const removeToast = useCallback((id: number) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  // ── Diff navigation
-  const navigateDiff = useCallback((direction: 1 | -1) => {
-    if (diffCount === 0) return;
-    setCurrentDiff(prev => {
-      const next = direction === 1
-        ? (prev >= diffCount - 1 ? 0 : prev + 1)
-        : (prev <= 0 ? diffCount - 1 : prev - 1);
-      fileDiffRef.current?.scrollToDiff(next);
-      return next;
-    });
-  }, [diffCount]);
+  const refreshTree = useCallback(async (
+    left: DirInfo | null,
+    right: DirInfo | null,
+    nextFilter?: FileFilterConfig,
+  ) => {
+    setIsLoading(true);
+    setLoadingMsg(left && right ? 'Scanning folders…' : 'Loading folder preview…');
+    try {
+      const filters = nextFilter ?? filterConfig;
+      const { nodes, skippedDirs } = await scanFolders(left, right, filters, false);
+      setTreeNodes(nodes);
+      setIgnoredDirNames(skippedDirs.sort());
+      const fileCount = flattenNodes(nodes).filter(n => !n.isDirectory).length;
+      if (left && right) {
+        const diffCount = flattenNodes(nodes).filter(n => !n.isDirectory && n.status === 'different').length;
+        setStatusMsg(`Folder comparison complete — ${diffCount} modified`);
+        setStatusRight(`${fileCount} files`);
+      } else if (left) {
+        setStatusMsg(`Previewing left folder: ${left.name}`);
+        setStatusRight(`${fileCount} files`);
+      } else if (right) {
+        setStatusMsg(`Previewing right folder: ${right.name}`);
+        setStatusRight(`${fileCount} files`);
+      } else {
+        setStatusMsg('Ready — select folders to compare');
+        setStatusRight('');
+      }
+    } catch (err: unknown) {
+      addToast(err instanceof Error ? err.message : 'Folder scan failed', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [scanFolders, addToast, filterConfig]);
 
-  const goFirstDiff = useCallback(() => { if (diffCount === 0) return; setCurrentDiff(0); fileDiffRef.current?.scrollToDiff(0); }, [diffCount]);
-  const goLastDiff = useCallback(() => { if (diffCount === 0) return; const l = diffCount - 1; setCurrentDiff(l); fileDiffRef.current?.scrollToDiff(l); }, [diffCount]);
-
-  // ── Open folder
-  async function openFolder(side: 'left' | 'right') {
+  const openFolder = useCallback(async (side: 'left' | 'right') => {
     if (!fsApiSupported) return;
     try {
       const handle = await window.showDirectoryPicker({ mode: 'read' });
       const info: DirInfo = { handle, name: handle.name };
-
-      let newLeft = leftDir;
-      let newRight = rightDir;
-      if (side === 'left') { setLeftDir(info); newLeft = info; }
-      else { setRightDir(info); newRight = info; }
-
-      if (newLeft && newRight) {
-        await runFolderScan(newLeft, newRight);
-      } else {
-        setStatusMsg(`Loaded folder: ${handle.name}`);
-      }
+      const nextLeft = side === 'left' ? info : leftDir;
+      const nextRight = side === 'right' ? info : rightDir;
+      if (side === 'left') setLeftDir(info);
+      else setRightDir(info);
+      await refreshTree(nextLeft, nextRight);
+      setActiveTabId('folder:root');
     } catch (err: unknown) {
-      if (err instanceof Error && err.name !== 'AbortError')
+      if (err instanceof Error && err.name !== 'AbortError') {
         addToast(err.message || 'Could not open folder', 'error');
+      }
     }
-  }
+  }, [fsApiSupported, leftDir, rightDir, refreshTree, setActiveTabId, addToast]);
 
-  // ── Run initial shallow folder scan
-  async function runFolderScan(left: DirInfo, right: DirInfo) {
-    setView('loading');
-    await tick();
-    try {
-      const filters = (filterConfig.includePatterns || filterConfig.excludePatterns) ? filterConfig : undefined;
-      const { nodes, skippedDirs } = await listChildren(left.handle, right.handle, '', 0, filters);
+  const refreshFolders = useCallback(async () => {
+    await refreshTree(leftDir, rightDir);
+  }, [refreshTree, leftDir, rightDir]);
 
-      const finalNodes = expandAll ? await expandAllRecursive(nodes, filters) : nodes;
-      setTreeNodes(finalNodes);
-
-      setIgnoredDirNames(skippedDirs.sort());
-      const fileCount = countFilesFlat(finalNodes);
-      setStatusMsg(`Folder scan complete — ${fileCount} entries`);
-      setStatusRight(skippedDirs.length > 0 ? `${skippedDirs.length} dir${skippedDirs.length !== 1 ? 's' : ''} skipped` : '');
-      setView('folder');
-    } catch (err: unknown) {
-      addToast(err instanceof Error ? err.message : 'Folder scan failed', 'error');
-      setView('empty');
-    }
-  }
-
-  function countFilesFlat(nodes: FolderTreeNode[]): number {
-    let count = 0;
-    for (const n of nodes) {
-      count++;
-      if (n.expanded && n.children.length > 0) count += countFilesFlat(n.children);
-    }
-    return count;
-  }
-
-  // ── Expand a single tree node
-  async function handleExpandNode(path: string) {
-    const filters = (filterConfig.includePatterns || filterConfig.excludePatterns) ? filterConfig : undefined;
-
-    async function expandInTree(nodes: FolderTreeNode[]): Promise<FolderTreeNode[]> {
+  async function toggleExpand(path: string) {
+    async function expandIn(nodes: FolderTreeNode[]): Promise<FolderTreeNode[]> {
       const result: FolderTreeNode[] = [];
       for (const node of nodes) {
         if (node.path === path && node.isDirectory) {
           if (!node.loaded) {
-            const leftDirHandle = node.leftHandle as FileSystemDirectoryHandle | undefined;
-            const rightDirHandle = node.rightHandle as FileSystemDirectoryHandle | undefined;
-            const { nodes: children } = await listChildren(leftDirHandle, rightDirHandle, node.path, node.depth + 1, filters);
-            result.push({ ...node, children, expanded: true, loaded: true });
+            const { nodes: children } = await listChildren(
+              node.leftHandle as FileSystemDirectoryHandle | undefined,
+              node.rightHandle as FileSystemDirectoryHandle | undefined,
+              node.path,
+              node.depth + 1,
+              filterConfig,
+            );
+            result.push({ ...node, children, loaded: true, expanded: true });
           } else {
             result.push({ ...node, expanded: !node.expanded });
           }
         } else if (node.isDirectory && node.children.length > 0) {
-          result.push({ ...node, children: await expandInTree(node.children) });
+          result.push({ ...node, children: await expandIn(node.children) });
         } else {
           result.push(node);
         }
@@ -157,475 +185,286 @@ export default function FolderComparePage() {
       return result;
     }
 
-    setTreeNodes(await expandInTree(treeNodes));
+    setTreeNodes(await expandIn(treeNodes));
   }
 
-  // ── Expand All toggle
-  async function handleExpandAllToggle() {
-    const newExpandAll = !expandAll;
-    setExpandAll(newExpandAll);
-
-    if (newExpandAll && leftDir && rightDir) {
-      setView('loading');
-      await tick();
-      const filters = (filterConfig.includePatterns || filterConfig.excludePatterns) ? filterConfig : undefined;
-      const expanded = await expandAllRecursive(treeNodes, filters);
-      setTreeNodes(expanded);
-      setView('folder');
-      addToast('All folders expanded', 'info');
-    } else if (!newExpandAll) {
-      // Collapse all
-      function collapseAll(nodes: FolderTreeNode[]): FolderTreeNode[] {
-        return nodes.map(n => n.isDirectory ? { ...n, expanded: false, children: collapseAll(n.children) } : n);
-      }
-      setTreeNodes(collapseAll(treeNodes));
-      addToast('All folders collapsed', 'info');
-    }
-  }
-
-  // ── Apply filters
-  async function applyFilters(config: FileFilterConfig) {
-    setFilterConfig(config);
-    setShowFilterDialog(false);
-    if (leftDir && rightDir) {
-      await runFolderScan(leftDir, rightDir);
-    }
-    addToast('Filters applied', 'info');
-  }
-
-  // ── Compare single file from tree
-  async function compareFolderFile(node: FolderTreeNode) {
-    if (node.isDirectory || !node.leftHandle || !node.rightHandle || !leftDir || !rightDir) return;
-
-    setView('loading');
-    await tick();
-    const [lFile, rFile] = await Promise.all([
-      (node.leftHandle as FileSystemFileHandle).getFile(),
-      (node.rightHandle as FileSystemFileHandle).getFile(),
-    ]);
-    const [lContent, rContent] = await Promise.all([lFile.text(), rFile.text()]);
-
-    const newLeft: FileInfo = { handle: node.leftHandle as FileSystemFileHandle, content: lContent, name: `${leftDir.name}/${node.path}`, size: lFile.size };
-    const newRight: FileInfo = { handle: node.rightHandle as FileSystemFileHandle, content: rContent, name: `${rightDir.name}/${node.path}`, size: rFile.size };
-
-    setLeftFile(newLeft);
-    setRightFile(newRight);
-
-    const ops = computeLineDiff(lContent, rContent);
-    const diffs = ops.filter(op => op.type !== 'equal').length;
-    setDiffOps(ops);
-    setDiffCount(diffs);
-    setCurrentDiff(-1);
-    setStatusMsg(`${diffs} difference${diffs !== 1 ? 's' : ''} found`);
-    setStatusRight(`${countLines(lContent)} / ${countLines(rContent)} lines`);
-    setView('file-diff');
-    if (diffs > 0) {
-      setTimeout(() => { setCurrentDiff(0); fileDiffRef.current?.scrollToDiff(0); }, 50);
-    }
-  }
-
-  // ── Handle text changes in TextCompareView ────────────────────────────────
-  const handleLeftTextChange = useCallback(async (newText: string) => {
-    if (!leftFile) return;
-    const updated = { ...leftFile, content: newText, size: newText.length };
-    setLeftFile(updated);
-    if (rightFile) {
-      // Re-compute diff
-      const ops = computeLineDiff(newText, rightFile.content);
-      setDiffOps(ops);
-      const diffs = ops.filter(op => op.type !== 'equal').length;
-      setDiffCount(diffs);
-    }
-  }, [leftFile, rightFile]);
-
-  const handleRightTextChange = useCallback(async (newText: string) => {
-    if (!rightFile) return;
-    const updated = { ...rightFile, content: newText, size: newText.length };
-    setRightFile(updated);
-    if (leftFile) {
-      // Re-compute diff
-      const ops = computeLineDiff(leftFile.content, newText);
-      setDiffOps(ops);
-      const diffs = ops.filter(op => op.type !== 'equal').length;
-      setDiffCount(diffs);
-    }
-  }, [leftFile, rightFile]);
-
-  // ── Save file back
-  async function saveFile(side: 'left' | 'right') {
-    const file = side === 'left' ? leftFile : rightFile;
-    if (!file) return;
+  async function openFileCompareTab(
+    leftHandle: FileSystemFileHandle,
+    rightHandle: FileSystemFileHandle,
+    leftLabel: string,
+    rightLabel: string,
+  ) {
+    setIsLoading(true);
+    setLoadingMsg('Opening compare tab…');
     try {
-      const perm = await file.handle.requestPermission({ mode: 'readwrite' });
-      if (perm !== 'granted') { addToast('Write permission denied', 'error'); return; }
-      const writable = await file.handle.createWritable();
-      await writable.write(file.content);
-      await writable.close();
-      addToast(`${file.name} saved`, 'success');
+      const [leftFileRaw, rightFileRaw] = await Promise.all([leftHandle.getFile(), rightHandle.getFile()]);
+      const [leftContent, rightContent] = await Promise.all([leftFileRaw.text(), rightFileRaw.text()]);
+
+      const leftFile: FileInfo = { handle: leftHandle, content: leftContent, name: leftLabel, size: leftFileRaw.size };
+      const rightFile: FileInfo = { handle: rightHandle, content: rightContent, name: rightLabel, size: rightFileRaw.size };
+      const diffOps = computeDiff(leftContent, rightContent, comparisonOptions);
+      const diffCount = diffOps.filter(op => op.type !== 'equal').length;
+
+      const tabId = `file:${leftLabel}::${rightLabel}`;
+      openTab({
+        id: tabId,
+        type: 'file',
+        title: `${leftLabel.split('/').pop()} ↔ ${rightLabel.split('/').pop()}`,
+        closable: true,
+        data: { leftFile, rightFile, diffOps, diffCount },
+      });
+      setStatusMsg(`Opened compare tab — ${diffCount} difference${diffCount !== 1 ? 's' : ''}`);
+      setStatusRight(`${countLines(leftContent)} / ${countLines(rightContent)} lines`);
     } catch (err: unknown) {
-      addToast('Save failed: ' + (err instanceof Error ? err.message : String(err)), 'error');
+      addToast(err instanceof Error ? err.message : 'Could not open compare tab', 'error');
+    } finally {
+      setIsLoading(false);
     }
   }
 
-  // ── Copy file from tree
-  async function copyFolderFile(node: FolderTreeNode, fromSide: 'left' | 'right', toSide: 'left' | 'right') {
-    if (!leftDir || !rightDir) return;
+  async function compareSelectedPair() {
+    if (!selectedLeftCandidate || !selectedRightCandidate) return;
+    await openFileCompareTab(
+      selectedLeftCandidate.handle,
+      selectedRightCandidate.handle,
+      selectedLeftCandidate.path,
+      selectedRightCandidate.path,
+    );
+  }
 
-    const fromHandle = fromSide === 'left' ? node.leftHandle : node.rightHandle;
-    const toDirHandle = toSide === 'left' ? leftDir.handle : rightDir.handle;
-    if (!fromHandle || !toDirHandle) return;
+  const activeFileTab = useMemo(() => {
+    if (!activeTab || activeTab.type !== 'file' || !activeTab.data) return null;
+    return activeTab as CompareTab<FileTabData>;
+  }, [activeTab]);
 
-    try {
-      const perm = await toDirHandle.requestPermission({ mode: 'readwrite' });
-      if (perm !== 'granted') { addToast('Write permission denied', 'error'); return; }
+  const activeDiffCount = activeFileTab?.data?.diffCount ?? 0;
 
-      const srcFile = await (fromHandle as FileSystemFileHandle).getFile();
-      const content = await srcFile.arrayBuffer();
+  const updateActiveFileTabSide = useCallback((side: 'left' | 'right', text: string) => {
+    if (!activeFileTab?.data) return;
+    const { leftFile, rightFile } = activeFileTab.data;
+    const nextLeft = side === 'left' ? { ...leftFile, content: text, size: text.length } : leftFile;
+    const nextRight = side === 'right' ? { ...rightFile, content: text, size: text.length } : rightFile;
+    const diffOps = computeDiff(nextLeft.content, nextRight.content, comparisonOptions);
+    const diffCount = diffOps.filter(op => op.type !== 'equal').length;
+    updateTab(activeFileTab.id, { data: { leftFile: nextLeft, rightFile: nextRight, diffOps, diffCount } });
+    setStatusMsg(`${diffCount} difference${diffCount !== 1 ? 's' : ''} found`);
+  }, [activeFileTab, computeDiff, updateTab, comparisonOptions]);
 
-      const parts = node.path.split('/');
-      const fileName = parts.pop()!;
-      let targetDir = toDirHandle;
-      for (const part of parts) {
-        targetDir = await targetDir.getDirectoryHandle(part, { create: true });
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'w') {
+        if (!activeTab || activeTab.closable === false) return;
+        e.preventDefault();
+        closeTab(activeTab.id);
       }
-
-      const destHandle = await targetDir.getFileHandle(fileName, { create: true });
-      const writable = await destHandle.createWritable();
-      await writable.write(content);
-      await writable.close();
-
-      addToast(`Copied ${node.path}`, 'success');
-      await runFolderScan(leftDir, rightDir);
-    } catch (err: unknown) {
-      addToast('Copy failed: ' + (err instanceof Error ? err.message : String(err)), 'error');
-    }
-  }
-
-  // ── Back to folder view
-  function handleBackToFolder() {
-    setView('folder');
-    setStatusMsg(`Folder comparison`);
-    setStatusRight('');
-  }
-
-  // ── Swap sides
-  async function handleSwap() {
-    const tmpLeft = leftDir;
-    const tmpRight = rightDir;
-    setLeftDir(tmpRight);
-    setRightDir(tmpLeft);
-    if (tmpLeft && tmpRight) {
-      await runFolderScan(tmpRight, tmpLeft);
-    }
-    addToast('Sides swapped', 'info');
-  }
-
-  // ── Refresh
-  async function handleRefresh() {
-    if (leftDir && rightDir) await runFolderScan(leftDir, rightDir);
-  }
-
-  const hasDiffs = diffCount > 0;
-
-  // ── Tree statistics
-  const treeStats = useMemo(() => {
-    function countStats(nodes: FolderTreeNode[]): { total: number; same: number; different: number; leftOnly: number; rightOnly: number } {
-      let total = 0, same = 0, different = 0, leftOnly = 0, rightOnly = 0;
-      for (const n of nodes) {
-        if (!n.isDirectory) {
-          total++;
-          if (n.status === 'same') same++;
-          else if (n.status === 'different') different++;
-          else if (n.status === 'left-only') leftOnly++;
-          else if (n.status === 'right-only') rightOnly++;
-        }
-        if (n.expanded && n.children.length > 0) {
-          const childStats = countStats(n.children);
-          total += childStats.total; same += childStats.same;
-          different += childStats.different; leftOnly += childStats.leftOnly; rightOnly += childStats.rightOnly;
-        }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Tab') {
+        e.preventDefault();
+        if (e.shiftKey) activatePrevious();
+        else activateNext();
       }
-      return { total, same, different, leftOnly, rightOnly };
-    }
-    return countStats(treeNodes);
-  }, [treeNodes]);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [activeTab, closeTab, activateNext, activatePrevious]);
 
-  // ── Menu definitions
   const menus: MenuDefinition[] = useMemo(() => [
     {
       label: 'Session',
       items: [
-        { label: 'New Folder Compare', action: () => { setLeftDir(null); setRightDir(null); setTreeNodes([]); setView('empty'); } },
-        { label: 'New File Compare', action: () => router.push('/files') },
-        { label: 'New Text Compare', action: () => router.push('/text') },
-        { separator: true },
         { label: 'Home', action: () => router.push('/') },
         { separator: true },
-        { label: 'Close Tab', action: () => window.close() },
-      ],
-    },
-    {
-      label: 'Actions',
-      items: [
         { label: 'Open Left Folder…', action: () => openFolder('left') },
         { label: 'Open Right Folder…', action: () => openFolder('right') },
-        { separator: true },
-        { label: 'Refresh', action: handleRefresh, shortcut: 'F5', disabled: !leftDir || !rightDir },
-        { label: 'Swap Sides', action: handleSwap, disabled: !leftDir && !rightDir },
-        { separator: true },
-        { label: expandAll ? 'Collapse All' : 'Expand All', action: handleExpandAllToggle, disabled: treeNodes.length === 0 },
+        { label: 'Refresh', action: refreshFolders, disabled: !leftDir && !rightDir },
       ],
     },
     {
-      label: 'View',
+      label: 'Tabs',
       items: [
-        { label: 'Show All', action: () => setFilterStatusFilter('all'), checked: filterStatusFilter === 'all' },
-        { label: 'Show Different', action: () => setFilterStatusFilter('different'), checked: filterStatusFilter === 'different' },
-        { label: 'Show Left Only', action: () => setFilterStatusFilter('left-only'), checked: filterStatusFilter === 'left-only' },
-        { label: 'Show Right Only', action: () => setFilterStatusFilter('right-only'), checked: filterStatusFilter === 'right-only' },
-        { label: 'Show Same', action: () => setFilterStatusFilter('same'), checked: filterStatusFilter === 'same' },
-      ],
-    },
-    {
-      label: 'Tools',
-      items: [
-        { label: 'File Filters…', action: () => setShowFilterDialog(true) },
-        { separator: true },
-        { label: 'Clear Filters', action: () => applyFilters({ includePatterns: '', excludePatterns: '' }), disabled: !filterConfig.includePatterns && !filterConfig.excludePatterns },
+        { label: 'Next Tab', action: activateNext, shortcut: 'Ctrl+Tab' },
+        { label: 'Previous Tab', action: activatePrevious, shortcut: 'Ctrl+Shift+Tab' },
+        { label: 'Close Active Tab', action: () => activeTab?.closable !== false && closeTab(activeTab.id), shortcut: 'Ctrl+W', disabled: !activeTab || activeTab.closable === false },
       ],
     },
     {
       label: 'Help',
       items: [
-        { label: 'Keyboard Shortcuts', action: () => addToast('F5: Refresh • F7/F8: Prev/Next diff • Click folder to expand', 'info') },
-        { separator: true },
         { label: 'About QZL Compare', action: () => setShowAbout(true) },
       ],
     },
-  ], [leftDir, rightDir, expandAll, filterStatusFilter, filterConfig, treeNodes, router]);
+  ], [router, refreshFolders, openFolder, leftDir, rightDir, activateNext, activatePrevious, activeTab, closeTab]);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      {/* Title bar */}
       <header className="flex items-center h-10 px-4 bg-[#12161c] border-b border-[#4b5563] shrink-0">
         <div className="flex items-center gap-2 text-[#cc3333] font-bold text-sm select-none">
           <span className="text-lg">⚖️</span>
-          <span className="tracking-tight">
-            {view === 'file-diff' && leftFile
-              ? `${leftFile.name.split('/').pop()} - File Compare`
-              : 'Folder Compare'
-            } - QZL Compare
-          </span>
+          <span className="tracking-tight">Folder Compare - QZL Compare</span>
         </div>
       </header>
 
-      {/* Menu bar */}
       <MenuBar menus={menus} />
 
-      {/* Toolbar — Beyond Compare style */}
       <div className="flex items-center gap-0.5 h-10 px-2 bg-[#1e242c] border-b border-[#4b5563] shrink-0 overflow-x-auto">
-        {view === 'file-diff' ? (
+        <ToolBtn icon="📂" label="Open Left" onClick={() => openFolder('left')} />
+        <ToolBtn icon="📂" label="Open Right" onClick={() => openFolder('right')} />
+        <ToolBtn icon="↻" label="Refresh" onClick={refreshFolders} disabled={!leftDir && !rightDir} />
+        <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+        <ToolBtn icon="≠" label="Diffs" active={statusFilter === 'different'} onClick={() => setStatusFilter('different')} />
+        <ToolBtn icon="✱" label="All" active={statusFilter === 'all'} onClick={() => setStatusFilter('all')} />
+        <ToolBtn icon="=" label="Same" active={statusFilter === 'same'} onClick={() => setStatusFilter('same')} />
+        <ToolBtn icon="L" label="Left only" active={statusFilter === 'left-only'} onClick={() => setStatusFilter('left-only')} />
+        <ToolBtn icon="R" label="Right only" active={statusFilter === 'right-only'} onClick={() => setStatusFilter('right-only')} />
+        <ToolBtn icon="📄" label="Files only" active={filesOnlyMode} onClick={() => setFilesOnlyMode(v => !v)} />
+        <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+        <ToolBtn
+          icon="⇔"
+          label="Compare selected"
+          onClick={compareSelectedPair}
+          disabled={!selectedLeftCandidate || !selectedRightCandidate}
+          title="Compare manually selected left/right files"
+          accent
+        />
+        <ToolBtn icon="⚙️" label="Filters" onClick={() => setShowFilterDialog(true)} />
+        {activeFileTab && (
           <>
-            <ToolBtn icon="📁" label="Back" onClick={handleBackToFolder} title="Back to folder comparison" />
             <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
-            {hasDiffs && (
-              <>
-                <ToolBtn icon="⏮" label="First" onClick={goFirstDiff} title="First difference" />
-                <ToolBtn icon="◀" label="Prev" onClick={() => navigateDiff(-1)} title="Previous difference (F7)" />
-                <span className="text-[11px] text-[#9ca3af] px-2 py-1 bg-[#12161c] border border-[#4b5563]/50 rounded tabular-nums select-none font-semibold">
-                  {currentDiff + 1}/{diffCount}
-                </span>
-                <ToolBtn icon="▶" label="Next" onClick={() => navigateDiff(+1)} title="Next difference (F8)" />
-                <ToolBtn icon="⏭" label="Last" onClick={goLastDiff} title="Last difference" />
-              </>
-            )}
-          </>
-        ) : (
-          <>
-            {/* View filter group */}
-            <ToolBtn icon="✱" label="All" active={filterStatusFilter === 'all'} onClick={() => setFilterStatusFilter('all')} title="Show all entries" />
-            <ToolBtn icon="≠" label="Diffs" active={filterStatusFilter === 'different'} onClick={() => setFilterStatusFilter('different')} title="Show differences only" />
-            <ToolBtn icon="=" label="Same" active={filterStatusFilter === 'same'} onClick={() => setFilterStatusFilter('same')} title="Show matching entries" />
-
-            <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
-
-            {/* Rules & Filters */}
-            <ToolBtn icon="📋" label="Rules" active={showFilterBar} onClick={() => setShowFilterBar(v => !v)} title="Toggle comparison rules & filters" />
-            <ToolBtn icon="🔍" label="Filters" active={!!(filterConfig.includePatterns || filterConfig.excludePatterns)} onClick={() => setShowFilterDialog(true)} title="File include/exclude filters" />
-
-            <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
-
-            {/* Tree controls */}
-            <ToolBtn icon="⊞" label="Expand" onClick={() => { if (!expandAll) handleExpandAllToggle(); }} disabled={treeNodes.length === 0 || expandAll} title="Expand all folders" />
-            <ToolBtn icon="⊟" label="Collapse" onClick={() => { if (expandAll) handleExpandAllToggle(); else { setTreeNodes(prev => collapseAllNodes(prev)); addToast('Collapsed', 'info'); } }} disabled={treeNodes.length === 0} title="Collapse all folders" />
-            <ToolBtn icon="☑" label="Select" active={selectMode} onClick={() => { setSelectMode(v => !v); setSelectedNodes(new Set()); }} title="Toggle selection mode" />
-            <ToolBtn icon="📄" label="Files" active={filesOnlyMode} onClick={() => setFilesOnlyMode(v => !v)} title="Show files only (hide folders)" />
-
-            <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
-
-            {/* Actions */}
-            <ToolBtn icon="⇄" label="Swap" onClick={handleSwap} disabled={!leftDir && !rightDir} title="Swap left and right sides" />
-            <ToolBtn icon="↻" label="Refresh" onClick={handleRefresh} disabled={!leftDir || !rightDir} title="Refresh comparison (F5)" />
-
-            {view === 'folder' && (
-              <>
-                <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
-                <span className="text-[11px] text-[#6b7280] px-1 tabular-nums select-none whitespace-nowrap">
-                  {treeStats.total} files • {treeStats.different} diffs • {treeStats.leftOnly} L • {treeStats.rightOnly} R
-                </span>
-              </>
-            )}
+            <span className="text-[11px] text-[#6b7280] px-1 tabular-nums select-none whitespace-nowrap">
+              {activeDiffCount} diff{activeDiffCount !== 1 ? 's' : ''}
+            </span>
           </>
         )}
         <div className="flex-1" />
       </div>
 
-      {/* Filter bar (inline rules panel) */}
-      {showFilterBar && view === 'folder' && (
-        <div className="flex items-center gap-3 px-3 py-1.5 bg-[#252d37] border-b border-[#4b5563] shrink-0 text-xs">
-          <span className="text-[#9ca3af] whitespace-nowrap">Filters:</span>
-          <input
-            type="text"
-            value={filterConfig.includePatterns}
-            onChange={e => setFilterConfig(prev => ({ ...prev, includePatterns: e.target.value }))}
-            placeholder="Include: *.ts, *.tsx"
-            className="flex-1 min-w-0 h-6 px-2 text-[12px] font-mono bg-[#12161c] text-[#e5e7eb] border border-[#4b5563]/60 rounded outline-none focus:border-[#cc3333]/60 placeholder:text-[#4b5563]"
-          />
-          <input
-            type="text"
-            value={filterConfig.excludePatterns}
-            onChange={e => setFilterConfig(prev => ({ ...prev, excludePatterns: e.target.value }))}
-            placeholder="Exclude: *.log, node_modules"
-            className="flex-1 min-w-0 h-6 px-2 text-[12px] font-mono bg-[#12161c] text-[#e5e7eb] border border-[#4b5563]/60 rounded outline-none focus:border-[#cc3333]/60 placeholder:text-[#4b5563]"
-          />
-          <button
-            onClick={() => { if (leftDir && rightDir) runFolderScan(leftDir, rightDir); addToast('Filters applied', 'info'); }}
-            className="px-2 py-0.5 bg-[#cc3333] text-white rounded text-[11px] hover:bg-[#b52d2d] transition-colors"
-          >
-            Apply
-          </button>
-          {(filterConfig.includePatterns || filterConfig.excludePatterns) && (
-            <button
-              onClick={() => applyFilters({ includePatterns: '', excludePatterns: '' })}
-              className="text-[#f85149] hover:text-[#ff6b6b] text-[11px]"
-            >
-              ✕ Clear
-            </button>
-          )}
-        </div>
-      )}
+      <TabBar tabs={tabs} activeTabId={activeTabId} onSwitch={setActiveTabId} onClose={closeTab} />
 
-      {/* Active filter banner */}
-      {(filterConfig.includePatterns || filterConfig.excludePatterns) && !showFilterBar && view === 'folder' && (
-        <div className="flex items-center gap-2 px-4 py-1 bg-[#1e242c] border-b border-[#3b82f6]/30 text-xs text-[#3b82f6] shrink-0">
-          <span>🔍 Filters:</span>
-          {filterConfig.includePatterns && <span className="font-mono bg-[#12161c] px-1.5 py-0.5 rounded">+{filterConfig.includePatterns}</span>}
-          {filterConfig.excludePatterns && <span className="font-mono bg-[#12161c] px-1.5 py-0.5 rounded">-{filterConfig.excludePatterns}</span>}
-          <button onClick={() => applyFilters({ includePatterns: '', excludePatterns: '' })} className="ml-auto text-[#f85149] hover:text-[#ff6b6b]">✕</button>
-        </div>
-      )}
-
-      {/* Panel path bars */}
-      <div className="grid shrink-0 bg-[#181d24]"
-           style={{ gridTemplateColumns: '1fr 3px 1fr' }}>
+      <div className="grid shrink-0 bg-[#181d24]" style={{ gridTemplateColumns: '1fr 3px 1fr' }}>
         <PathBar
-          path={view === 'file-diff' ? (leftFile?.name ?? '') : (leftDir?.name ?? '')}
+          sideLabel="Left folder"
+          path={leftDir?.name ?? ''}
+          placeholder="Select the left folder to preview"
           onOpen={() => openFolder('left')}
           fsApiSupported={fsApiSupported}
-          isFile={view === 'file-diff'}
         />
         <div className="bg-[#4b5563]/30" />
         <PathBar
-          path={view === 'file-diff' ? (rightFile?.name ?? '') : (rightDir?.name ?? '')}
+          sideLabel="Right folder"
+          path={rightDir?.name ?? ''}
+          placeholder="Select the right folder to preview"
           onOpen={() => openFolder('right')}
           fsApiSupported={fsApiSupported}
-          isFile={view === 'file-diff'}
         />
       </div>
 
-      {/* Main content area */}
       <main className="flex-1 overflow-hidden flex flex-col bg-[#181d24]">
-        {view === 'empty' && (
-          <div className="flex items-center justify-center h-full text-[#6b7280]">
-            <div className="text-center">
-              <div className="text-5xl mb-4">📁</div>
-              <p className="text-lg font-semibold text-[#9ca3af] mb-2">Folder Compare</p>
-              <p className="text-sm mb-6">Open two folders to compare their contents</p>
-              {fsApiSupported ? (
-                <div className="flex gap-3 justify-center">
-                  <button onClick={() => openFolder('left')} className="btn gap-1.5">📂 Open Left Folder</button>
-                  <button onClick={() => openFolder('right')} className="btn gap-1.5">📂 Open Right Folder</button>
-                </div>
-              ) : (
-                <div className="max-w-md p-4 bg-[#3a2a1e] border-2 border-[#e08c4b] rounded-lg text-[#e08c4b] text-sm text-left">
-                  <p className="font-semibold mb-1">⚠️ Browser Not Supported</p>
-                  Use Chrome, Edge, or another Chromium-based browser for folder comparison.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-        {view === 'loading' && <LoadingView />}
-        {view === 'folder' && (
-          <FolderTreeView
-            nodes={treeNodes}
-            statusFilter={filterStatusFilter}
-            ignoredDirNames={ignoredDirNames}
-            onExpand={handleExpandNode}
-            onCompare={compareFolderFile}
-            onCopy={copyFolderFile}
-            selectMode={selectMode}
-            selectedNodes={selectedNodes}
-            onToggleSelect={(path) => setSelectedNodes(prev => { const next = new Set(prev); if (next.has(path)) next.delete(path); else next.add(path); return next; })}
-            filesOnlyMode={filesOnlyMode}
-          />
-        )}
-        {view === 'file-diff' && leftFile && rightFile && (
-          <TextCompareView
-            ops={diffOps}
-            leftText={leftFile.content}
-            rightText={rightFile.content}
-            leftPath={leftFile.name}
-            rightPath={rightFile.name}
-            onLeftChange={handleLeftTextChange}
-            onRightChange={handleRightTextChange}
-            onSaveLeft={() => saveFile('left')}
-            onSaveRight={() => saveFile('right')}
-            onLoadLeft={() => openFolder('left')}
-            onLoadRight={() => openFolder('right')}
-            fsApiSupported={fsApiSupported}
+        {isLoading ? (
+          <LoadingView message={loadingMsg} />
+        ) : (
+          <TabContent
+            activeTab={activeTab}
+            renderFolder={() => (
+              <FolderTreeWorkspace
+                nodes={treeNodes}
+                scopePath={(activeTab?.data as FolderTabData | undefined)?.scopePath ?? ''}
+                ignoredDirNames={ignoredDirNames}
+                statusFilter={statusFilter}
+                filesOnlyMode={filesOnlyMode}
+                sortBy={sortBy}
+                sortOrder={sortOrder}
+                onSortChange={(nextSortBy) => {
+                  if (sortBy === nextSortBy) setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+                  else {
+                    setSortBy(nextSortBy);
+                    setSortOrder('asc');
+                  }
+                }}
+                leftSelectionPath={selectedLeftCandidate?.path}
+                rightSelectionPath={selectedRightCandidate?.path}
+                onExpand={toggleExpand}
+                onOpenFileTab={(node) => {
+                  if (!leftDir || !rightDir || node.isDirectory || !node.leftHandle || !node.rightHandle) return;
+                  openFileCompareTab(
+                    node.leftHandle as FileSystemFileHandle,
+                    node.rightHandle as FileSystemFileHandle,
+                    `${leftDir.name}/${node.path}`,
+                    `${rightDir.name}/${node.path}`,
+                  );
+                }}
+                onOpenFolderTab={(node) => {
+                  openTab({
+                    id: `folder:${node.path}`,
+                    title: node.path,
+                    type: 'folder',
+                    closable: true,
+                    data: { scopePath: node.path },
+                  });
+                }}
+                onSelectLeft={(node) => {
+                  if (!node.leftHandle || node.isDirectory) return;
+                  const label = leftDir ? `${leftDir.name}/${node.path}` : node.path;
+                  setSelectedLeftCandidate({ path: label, handle: node.leftHandle as FileSystemFileHandle });
+                }}
+                onSelectRight={(node) => {
+                  if (!node.rightHandle || node.isDirectory) return;
+                  const label = rightDir ? `${rightDir.name}/${node.path}` : node.path;
+                  setSelectedRightCandidate({ path: label, handle: node.rightHandle as FileSystemFileHandle });
+                }}
+              />
+            )}
+            renderFile={(tab) => {
+              const fileTab = tab as CompareTab<FileTabData>;
+              const data = fileTab.data!;
+              return (
+                <TextCompareView
+                  ops={data.diffOps}
+                  leftText={data.leftFile.content}
+                  rightText={data.rightFile.content}
+                  leftPath={data.leftFile.name}
+                  rightPath={data.rightFile.name}
+                  onLeftChange={(text) => updateActiveFileTabSide('left', text)}
+                  onRightChange={(text) => updateActiveFileTabSide('right', text)}
+                  onSaveLeft={async () => saveTabFile(data.leftFile, addToast)}
+                  onSaveRight={async () => saveTabFile(data.rightFile, addToast)}
+                  onLoadLeft={() => openFolder('left')}
+                  onLoadRight={() => openFolder('right')}
+                  fsApiSupported={fsApiSupported}
+                />
+              );
+            }}
           />
         )}
       </main>
 
-      {/* Status bar */}
       <footer className="flex justify-between items-center h-8 px-4 bg-[#12161c] border-t-2 border-[#4b5563] text-xs text-[#9ca3af] shrink-0 font-medium">
         <span className="flex items-center gap-2">
           <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#3b82f6] text-white text-[9px] font-bold">i</span>
           <span>{statusMsg}</span>
         </span>
-        {statusRight && <span className="text-[#6b7280] text-[11px]">{statusRight}</span>}
+        <span className="text-[#6b7280] text-[11px]">{statusRight}</span>
       </footer>
 
       <Toast toasts={toasts} onRemove={removeToast} />
 
-      {/* Filter dialog */}
       {showFilterDialog && (
         <FilterDialog
           config={filterConfig}
-          onApply={applyFilters}
           onClose={() => setShowFilterDialog(false)}
+          onApply={async (next) => {
+            setFilterConfig(next);
+            setShowFilterDialog(false);
+            await refreshTree(leftDir, rightDir, next);
+          }}
         />
       )}
 
-      {/* About dialog */}
       {showAbout && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60" onClick={() => setShowAbout(false)}>
           <div className="bg-[#252d37] border border-[#4b5563] rounded-xl shadow-2xl p-6 max-w-sm text-center" onClick={e => e.stopPropagation()}>
             <div className="text-5xl mb-3">⚖️</div>
             <h2 className="text-xl font-bold text-[#e5e7eb] mb-1">QZL Compare</h2>
-            <p className="text-sm text-[#9ca3af] mb-2">Version 0.1.0</p>
-            <p className="text-xs text-[#6b7280] mb-4">Free browser-based file & folder comparison tool.<br/>All processing happens locally.</p>
+            <p className="text-sm text-[#9ca3af] mb-2">Tabbed Folder Workspace</p>
+            <p className="text-xs text-[#6b7280] mb-4">Immediate folder preview, flexible file matching, and per-tab diff state.</p>
             <button onClick={() => setShowAbout(false)} className="btn">Close</button>
           </div>
         </div>
@@ -634,318 +473,62 @@ export default function FolderComparePage() {
   );
 }
 
-// ── Filter Dialog ───────────────────────────────────────────────────────────
-
-function FilterDialog({ config, onApply, onClose }: {
-  config: FileFilterConfig;
-  onApply: (config: FileFilterConfig) => void;
-  onClose: () => void;
-}) {
-  const [include, setInclude] = useState(config.includePatterns);
-  const [exclude, setExclude] = useState(config.excludePatterns);
-
-  return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60" onClick={onClose}>
-      <div className="bg-[#252d37] border border-[#4b5563] rounded-xl shadow-2xl p-6 w-[420px]" onClick={e => e.stopPropagation()}>
-        <h2 className="text-lg font-bold text-[#e5e7eb] mb-4">🔍 File Filters</h2>
-
-        <div className="space-y-4">
-          <div>
-            <label className="text-xs font-semibold text-[#e5e7eb] block mb-1.5">Include Patterns</label>
-            <input
-              type="text"
-              value={include}
-              onChange={e => setInclude(e.target.value)}
-              placeholder="e.g., *.ts, *.tsx, *.js"
-              className="w-full px-3 py-2 text-sm bg-[#12161c] text-[#e5e7eb] border border-[#4b5563] rounded-lg outline-none focus:border-[#cc3333] font-mono"
-            />
-            <p className="text-[11px] text-[#6b7280] mt-1">Comma-separated. Only files matching these patterns will be shown. Leave empty to include all.</p>
-          </div>
-
-          <div>
-            <label className="text-xs font-semibold text-[#e5e7eb] block mb-1.5">Exclude Patterns</label>
-            <input
-              type="text"
-              value={exclude}
-              onChange={e => setExclude(e.target.value)}
-              placeholder="e.g., *.log, *.tmp, *.map"
-              className="w-full px-3 py-2 text-sm bg-[#12161c] text-[#e5e7eb] border border-[#4b5563] rounded-lg outline-none focus:border-[#cc3333] font-mono"
-            />
-            <p className="text-[11px] text-[#6b7280] mt-1">Comma-separated. Files matching these patterns will be hidden.</p>
-          </div>
-
-          <div className="pt-2 border-t border-[#4b5563]">
-            <p className="text-[11px] text-[#6b7280] mb-3">
-              💡 Use <code className="bg-[#374151] px-1 rounded">*</code> for wildcards. Example: <code className="bg-[#374151] px-1 rounded">*.ts</code> matches all TypeScript files.
-            </p>
-            <div className="flex gap-2 justify-end">
-              <button onClick={onClose} className="btn">Cancel</button>
-              <button
-                onClick={() => onApply({ includePatterns: include, excludePatterns: exclude })}
-                className="btn btn-active"
-              >
-                Apply Filters
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Folder Tree View ────────────────────────────────────────────────────────
-
-const STATUS_META: Record<string, { sym: string; cls: string }> = {
-  same:         { sym: '✓', cls: 'text-[#56d364]' },
-  different:    { sym: '✕', cls: 'text-[#f85149]' },
-  'left-only':  { sym: '◀', cls: 'text-[#79c0ff]' },
-  'right-only': { sym: '▶', cls: 'text-[#56d364]' },
-};
-
-const ROW_BG: Record<string, string> = {
-  same:         'hover:bg-[rgba(255,255,255,0.02)]',
-  different:    'bg-[rgba(248,81,73,0.07)] hover:bg-[rgba(248,81,73,0.13)]',
-  'left-only':  'bg-[rgba(121,192,255,0.07)] hover:bg-[rgba(121,192,255,0.13)]',
-  'right-only': 'bg-[rgba(86,211,100,0.07)] hover:bg-[rgba(86,211,100,0.13)]',
-};
-
-function FolderTreeView({ nodes, statusFilter, ignoredDirNames, onExpand, onCompare, onCopy, selectMode, selectedNodes, onToggleSelect, filesOnlyMode }: {
-  nodes: FolderTreeNode[];
-  statusFilter: string;
-  ignoredDirNames: string[];
-  onExpand: (path: string) => void;
-  onCompare: (node: FolderTreeNode) => void;
-  onCopy: (node: FolderTreeNode, from: 'left' | 'right', to: 'left' | 'right') => void;
-  selectMode: boolean;
-  selectedNodes: Set<string>;
-  onToggleSelect: (path: string) => void;
-  filesOnlyMode: boolean;
-}) {
-  function filterNodes(nodes: FolderTreeNode[]): FolderTreeNode[] {
-    let result = nodes;
-    if (filesOnlyMode) {
-      result = result.filter(n => !n.isDirectory);
+async function saveTabFile(file: FileInfo, addToast: (message: string, type?: ToastMessage['type']) => void) {
+  try {
+    const perm = await file.handle.requestPermission({ mode: 'readwrite' });
+    if (perm !== 'granted') {
+      addToast('Write permission denied', 'error');
+      return;
     }
-    if (statusFilter !== 'all') {
-      result = result.filter(n => {
-        if (n.isDirectory) return !filesOnlyMode;
-        return n.status === statusFilter;
-      });
-    }
-    if (!filesOnlyMode) {
-      result = result.map(n => n.isDirectory ? { ...n, children: filterNodes(n.children) } : n);
-    }
-    return result;
+    const writable = await file.handle.createWritable();
+    await writable.write(file.content);
+    await writable.close();
+    addToast(`${file.name} saved`, 'success');
+  } catch (err: unknown) {
+    addToast('Save failed: ' + (err instanceof Error ? err.message : String(err)), 'error');
   }
+}
 
-  const filtered = filterNodes(nodes);
-
-  function renderNodes(nodes: FolderTreeNode[]): React.ReactNode[] {
-    const result: React.ReactNode[] = [];
-    for (const node of nodes) {
-      result.push(
-        <TreeRow key={node.path} node={node} onExpand={onExpand} onCompare={onCompare} onCopy={onCopy}
-          selectMode={selectMode} selected={selectedNodes.has(node.path)} onToggleSelect={onToggleSelect} />
-      );
-      if (node.isDirectory && node.expanded && node.children.length > 0) {
-        result.push(...renderNodes(node.children));
-      }
+function flattenNodes(nodes: FolderTreeNode[]): FolderTreeNode[] {
+  const result: FolderTreeNode[] = [];
+  for (const node of nodes) {
+    result.push(node);
+    if (node.isDirectory && node.expanded && node.children.length > 0) {
+      result.push(...flattenNodes(node.children));
     }
-    return result;
   }
-
-  return (
-    <div className="flex flex-col h-full overflow-hidden bg-[#252d37]">
-      {ignoredDirNames.length > 0 && (
-        <div className="flex items-start gap-2 px-4 py-2 bg-[#3a2a1e] border-b border-[#e3b341]/40 text-[#f4c878] text-xs shrink-0">
-          <span className="shrink-0 mt-0.5 text-sm">⚠️</span>
-          <span>Skipped {ignoredDirNames.length} ignored director{ignoredDirNames.length !== 1 ? 'ies' : 'y'}: <span className="font-mono text-[11px]">{ignoredDirNames.join(', ')}</span></span>
-        </div>
-      )}
-
-      {/* Table header */}
-      <div className="flex items-center px-4 py-1.5 bg-[#12161c] border-b border-[#4b5563] text-[11px] font-semibold text-[#3b82f6] shrink-0">
-        {selectMode && <div className="w-6 shrink-0" />}
-        <div className="flex-1 min-w-0">Name ▴</div>
-        <div className="w-14 text-center">Status</div>
-        <div className="w-16 text-right">Size</div>
-        <div className="w-28 text-right">Modified</div>
-        <div className="w-16 text-right">Actions</div>
-      </div>
-
-      {/* Tree items */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden">
-        {filtered.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-[#6b7280]">
-            <div className="text-center">
-              <div className="text-3xl mb-2">📭</div>
-              <p>No items to display</p>
-            </div>
-          </div>
-        ) : (
-          renderNodes(filtered)
-        )}
-      </div>
-    </div>
-  );
+  return result;
 }
 
-function TreeRow({ node, onExpand, onCompare, onCopy, selectMode, selected, onToggleSelect }: {
-  node: FolderTreeNode;
-  onExpand: (path: string) => void;
-  onCompare: (node: FolderTreeNode) => void;
-  onCopy: (node: FolderTreeNode, from: 'left' | 'right', to: 'left' | 'right') => void;
-  selectMode: boolean;
-  selected: boolean;
-  onToggleSelect: (path: string) => void;
+function PathBar({ sideLabel, path, placeholder, onOpen, fsApiSupported }: {
+  sideLabel: string;
+  path: string;
+  placeholder: string;
+  onOpen: () => void;
+  fsApiSupported: boolean;
 }) {
-  const meta = STATUS_META[node.status] ?? STATUS_META.same;
-  const indent = node.depth * 20;
-  
-  // Allow clicking row to compare if both files exist
-  const canCompare = !node.isDirectory && node.leftHandle && node.rightHandle;
-  const handleRowClick = () => {
-    if (canCompare) {
-      onCompare(node);
-    }
-  };
-
-  return (
-    <div 
-      className={`flex items-center px-4 py-1 border-b border-[#2a2a3a] transition-colors ${ROW_BG[node.status] ?? ''} ${selected ? 'ring-1 ring-inset ring-[#cc3333]/50 bg-[#cc3333]/10' : ''} ${canCompare ? 'cursor-pointer' : ''}`}
-      onClick={handleRowClick}
-    >
-      {/* Checkbox (select mode) */}
-      {selectMode && (
-        <div className="w-6 shrink-0 flex items-center justify-center">
-          {!node.isDirectory && (
-            <input 
-              type="checkbox" 
-              checked={selected} 
-              onChange={(e) => {
-                e.stopPropagation();
-                onToggleSelect(node.path);
-              }} 
-              onClick={(e) => e.stopPropagation()}
-              className="accent-[#cc3333] cursor-pointer" 
-            />
-          )}
-        </div>
-      )}
-      {/* Name with indent */}
-      <div className="flex-1 min-w-0 flex items-center gap-1.5" style={{ paddingLeft: indent }}>
-        {node.isDirectory ? (
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              onExpand(node.path);
-            }} 
-            className="flex items-center gap-1 hover:text-[#cc3333] transition-colors min-w-0"
-          >
-            <span className="text-[10px] text-[#6b7280] w-3 shrink-0">{node.expanded ? '▾' : '▸'}</span>
-            <span className="shrink-0">📁</span>
-            <span className="truncate text-[13px] text-[#e5e7eb] font-medium">{node.name}</span>
-          </button>
-        ) : (
-          <div className="flex items-center gap-1 min-w-0">
-            <span className="w-3 shrink-0" />
-            <span className="shrink-0 text-sm opacity-90">{getFileIcon(node.name)}</span>
-            <span className="truncate text-[13px] text-[#e5e7eb] font-medium">{node.name}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Status */}
-      <div className="w-14 text-center">
-        {!node.isDirectory && (
-          <span className={`text-xs font-semibold ${meta.cls}`}>{meta.sym}</span>
-        )}
-      </div>
-
-      {/* Size (shows left or right, whichever is present) */}
-      <div className="w-16 text-right text-[11px] text-[#9ca3af] tabular-nums">
-        {!node.isDirectory && (node.leftSize !== undefined ? formatSize(node.leftSize) : node.rightSize !== undefined ? formatSize(node.rightSize) : '')}
-      </div>
-
-      {/* Modified date (shows left or right) */}
-      <div className="w-28 text-right text-[11px] text-[#6b7280] tabular-nums">
-        {!node.isDirectory && (
-          node.leftDate ? node.leftDate.toLocaleDateString() + ' ' + node.leftDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          : node.rightDate ? node.rightDate.toLocaleDateString() + ' ' + node.rightDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          : ''
-        )}
-      </div>
-
-      {/* Actions */}
-      <div className="w-16 text-right flex items-center justify-end gap-0.5">
-        {!node.isDirectory && (
-          <>
-            {node.leftHandle && node.rightHandle && node.status === 'different' && (
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCompare(node);
-                }} 
-                className="px-1 py-0.5 text-[10px] bg-[#374151] text-[#3b82f6] hover:bg-[#4b5563] rounded" 
-                title="Compare"
-              >
-                🔍
-              </button>
-            )}
-            {node.status !== 'same' && node.leftHandle && (
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCopy(node, 'left', 'right');
-                }} 
-                className="px-1 py-0.5 text-[10px] bg-[#374151] text-[#56d364] hover:bg-[#2a4a2a] rounded" 
-                title="Copy left → right"
-              >
-                →
-              </button>
-            )}
-            {node.status !== 'same' && node.rightHandle && (
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCopy(node, 'right', 'left');
-                }} 
-                className="px-1 py-0.5 text-[10px] bg-[#374151] text-[#56d364] hover:bg-[#2a4a2a] rounded" 
-                title="Copy right ← left"
-              >
-                ←
-              </button>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function collapseAllNodes(nodes: FolderTreeNode[]): FolderTreeNode[] {
-  return nodes.map(n => n.isDirectory ? { ...n, expanded: false, children: collapseAllNodes(n.children) } : n);
-}
-
-function PathBar({ path, onOpen, fsApiSupported, isFile }: { path: string; onOpen: () => void; fsApiSupported: boolean; isFile?: boolean }) {
   return (
     <div className="flex flex-col bg-[#1e242c] overflow-hidden">
-      <div className="flex items-center gap-1 px-2 py-1">
+      <div className="flex items-center justify-between gap-2 px-3 py-1.5 border-b border-[#4b5563]/25 text-[11px] uppercase tracking-[0.16em] text-[#6b7280]">
+        <span>{sideLabel}</span>
+        <span className="text-[#9ca3af] normal-case tracking-normal">{path ? 'Selected' : 'Empty'}</span>
+      </div>
+      <div className="flex items-center gap-1 px-2 py-1.5">
         <input
           type="text"
           readOnly
           value={path}
-          placeholder={isFile ? '' : 'Select folder…'}
-          title={path || (isFile ? '' : 'Select folder')}
+          placeholder={placeholder}
+          title={path || placeholder}
           className="flex-1 min-w-0 h-7 px-2 text-[13px] font-mono bg-[#12161c] text-[#e5e7eb] border border-[#4b5563]/60 rounded
-                     placeholder:text-[#4b5563] truncate outline-none focus:border-[#cc3333]/60
-                     cursor-default"
+                     placeholder:text-[#4b5563] truncate outline-none focus:border-[#cc3333]/60 cursor-default"
         />
-        {!isFile && fsApiSupported && (
-          <button onClick={onOpen} className="shrink-0 w-7 h-7 flex items-center justify-center rounded
-                   bg-[#252d37] border border-[#4b5563]/50 text-[#9ca3af] hover:text-[#e5e7eb] hover:bg-[#374151]
-                   transition-colors" title="Browse for folder">
+        {fsApiSupported && (
+          <button
+            onClick={onOpen}
+            className="shrink-0 w-7 h-7 flex items-center justify-center rounded bg-[#252d37] border border-[#4b5563]/50 text-[#9ca3af] hover:text-[#e5e7eb] hover:bg-[#374151] transition-colors"
+            title="Browse for folder"
+          >
             📂
           </button>
         )}
@@ -954,6 +537,274 @@ function PathBar({ path, onOpen, fsApiSupported, isFile }: { path: string; onOpe
   );
 }
 
-function tick() {
-  return new Promise<void>(resolve => setTimeout(resolve, 0));
+function FilterDialog({ config, onApply, onClose }: {
+  config: FileFilterConfig;
+  onApply: (next: FileFilterConfig) => void;
+  onClose: () => void;
+}) {
+  const [include, setInclude] = useState(config.includePatterns);
+  const [exclude, setExclude] = useState(config.excludePatterns);
+  return (
+    <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/60" onClick={onClose}>
+      <div className="bg-[#252d37] border border-[#4b5563] rounded-xl shadow-2xl p-6 w-[420px]" onClick={e => e.stopPropagation()}>
+        <h2 className="text-lg font-bold text-[#e5e7eb] mb-4">🔍 File Filters</h2>
+        <div className="space-y-3">
+          <input
+            type="text"
+            value={include}
+            onChange={e => setInclude(e.target.value)}
+            placeholder="Include: *.ts, *.tsx"
+            className="w-full px-3 py-2 text-sm bg-[#12161c] text-[#e5e7eb] border border-[#4b5563] rounded-lg outline-none focus:border-[#cc3333] font-mono"
+          />
+          <input
+            type="text"
+            value={exclude}
+            onChange={e => setExclude(e.target.value)}
+            placeholder="Exclude: *.log, *.tmp"
+            className="w-full px-3 py-2 text-sm bg-[#12161c] text-[#e5e7eb] border border-[#4b5563] rounded-lg outline-none focus:border-[#cc3333] font-mono"
+          />
+        </div>
+        <div className="flex gap-2 justify-end mt-4">
+          <button onClick={onClose} className="btn">Cancel</button>
+          <button onClick={() => onApply({ includePatterns: include, excludePatterns: exclude })} className="btn btn-active">Apply</button>
+        </div>
+      </div>
+    </div>
+  );
 }
+
+function FolderTreeWorkspace({
+  nodes,
+  scopePath,
+  ignoredDirNames,
+  statusFilter,
+  filesOnlyMode,
+  sortBy,
+  sortOrder,
+  leftSelectionPath,
+  rightSelectionPath,
+  onSortChange,
+  onExpand,
+  onOpenFileTab,
+  onOpenFolderTab,
+  onSelectLeft,
+  onSelectRight,
+}: {
+  nodes: FolderTreeNode[];
+  scopePath: string;
+  ignoredDirNames: string[];
+  statusFilter: StatusFilter;
+  filesOnlyMode: boolean;
+  sortBy: SortBy;
+  sortOrder: SortOrder;
+  leftSelectionPath?: string;
+  rightSelectionPath?: string;
+  onSortChange: (sortBy: SortBy) => void;
+  onExpand: (path: string) => void;
+  onOpenFileTab: (node: FolderTreeNode) => void;
+  onOpenFolderTab: (node: FolderTreeNode) => void;
+  onSelectLeft: (node: FolderTreeNode) => void;
+  onSelectRight: (node: FolderTreeNode) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [listHeight, setListHeight] = useState(400);
+  const [listWidth, setListWidth] = useState(800);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => {
+      setListHeight(Math.max(200, el.clientHeight));
+      setListWidth(Math.max(300, el.clientWidth));
+    });
+    observer.observe(el);
+    setListHeight(Math.max(200, el.clientHeight));
+    setListWidth(Math.max(300, el.clientWidth));
+    return () => observer.disconnect();
+  }, []);
+
+  const scopedNodes = useMemo(() => {
+    if (!scopePath) return nodes;
+    const stack = [...nodes];
+    while (stack.length) {
+      const node = stack.pop()!;
+      if (node.path === scopePath) return node.children;
+      if (node.children.length) stack.push(...node.children);
+    }
+    return nodes;
+  }, [nodes, scopePath]);
+
+  const sortedAndFlattened = useMemo(() => {
+    const sorted = sortTree(scopedNodes, sortBy, sortOrder);
+    const filtered = filterTree(sorted, statusFilter, filesOnlyMode);
+    return flattenNodes(filtered);
+  }, [scopedNodes, sortBy, sortOrder, statusFilter, filesOnlyMode]);
+
+  const itemData = useMemo(() => ({
+    rows: sortedAndFlattened,
+    scopePath,
+    leftSelectionPath,
+    rightSelectionPath,
+    onExpand,
+    onOpenFileTab,
+    onOpenFolderTab,
+    onSelectLeft,
+    onSelectRight,
+  }), [sortedAndFlattened, scopePath, leftSelectionPath, rightSelectionPath, onExpand, onOpenFileTab, onOpenFolderTab, onSelectLeft, onSelectRight]);
+
+  return (
+    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-[#252d37]">
+      {ignoredDirNames.length > 0 && (
+        <div className="flex items-start gap-2 px-4 py-2 bg-[#3a2a1e] border-b border-[#e3b341]/40 text-[#f4c878] text-xs shrink-0">
+          <span className="shrink-0 mt-0.5 text-sm">⚠️</span>
+          <span>Skipped {ignoredDirNames.length} ignored director{ignoredDirNames.length !== 1 ? 'ies' : 'y'}: <span className="font-mono text-[11px]">{ignoredDirNames.join(', ')}</span></span>
+        </div>
+      )}
+
+      <div className="flex items-center px-4 py-1.5 bg-[#12161c] border-b border-[#4b5563] text-[11px] font-semibold text-[#3b82f6] shrink-0">
+        <button className="flex-1 min-w-0 text-left hover:text-[#79c0ff]" onClick={() => onSortChange('name')}>Name</button>
+        <div className="w-14 text-center">Status</div>
+        <button className="w-16 text-right hover:text-[#79c0ff]" onClick={() => onSortChange('size')}>Size</button>
+        <button className="w-32 text-right hover:text-[#79c0ff]" onClick={() => onSortChange('modified')}>Modified</button>
+      </div>
+
+      <div ref={containerRef} className="flex-1 min-h-0 overflow-hidden">
+        {sortedAndFlattened.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-[#6b7280]">
+            <div className="text-center px-6">
+              <div className="text-3xl mb-2">📭</div>
+              <p>No items to display</p>
+            </div>
+          </div>
+        ) : (
+          <List
+            rowComponent={CompareRow}
+            rowCount={sortedAndFlattened.length}
+            rowHeight={ROW_HEIGHT}
+            rowProps={itemData}
+            style={{ height: listHeight, width: listWidth }}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CompareRow({ index, style, ...data }: RowComponentProps<{
+  rows: FolderTreeNode[];
+  scopePath: string;
+  leftSelectionPath?: string;
+  rightSelectionPath?: string;
+  onExpand: (path: string) => void;
+  onOpenFileTab: (node: FolderTreeNode) => void;
+  onOpenFolderTab: (node: FolderTreeNode) => void;
+  onSelectLeft: (node: FolderTreeNode) => void;
+  onSelectRight: (node: FolderTreeNode) => void;
+}>) {
+  const node = data.rows[index];
+  const meta = STATUS_META[node.status] ?? STATUS_META.same;
+  const scopeDepthOffset = data.scopePath ? Math.max(1, data.scopePath.split('/').length) : 0;
+  const indent = Math.max(0, (node.depth - scopeDepthOffset)) * 18;
+  const canOpenCompare = !node.isDirectory && node.leftHandle && node.rightHandle;
+  const leftSelected = data.leftSelectionPath?.endsWith(`/${node.path}`) || data.leftSelectionPath === node.path;
+  const rightSelected = data.rightSelectionPath?.endsWith(`/${node.path}`) || data.rightSelectionPath === node.path;
+
+  return (
+    <div
+      style={style}
+      className={`grid grid-cols-[minmax(0,1fr)_56px_minmax(0,1fr)] items-stretch px-2 border-b border-[#2a2a3a] transition-colors ${ROW_BG[node.status] ?? ''} ${canOpenCompare ? 'cursor-pointer' : ''}`}
+      onDoubleClick={() => {
+        if (node.isDirectory) data.onOpenFolderTab(node);
+        else if (canOpenCompare) data.onOpenFileTab(node);
+      }}
+    >
+      <div
+        className={`min-w-0 flex items-center gap-1.5 px-2 py-1 rounded-sm ${leftSelected ? 'bg-[#1f6feb]/20 ring-1 ring-inset ring-[#1f6feb]/40' : ''}`}
+        style={{ paddingLeft: indent + 8 }}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (node.leftHandle && !node.isDirectory) data.onSelectLeft(node);
+        }}
+      >
+        {node.isDirectory ? (
+          <button onClick={() => data.onExpand(node.path)} className="flex items-center gap-1 hover:text-[#cc3333] min-w-0 text-left">
+            <span className="text-[10px] text-[#6b7280] w-3 shrink-0">{node.expanded ? '▾' : '▸'}</span>
+            <span className="shrink-0">📁</span>
+            <span className="truncate text-[13px] text-[#e5e7eb] font-medium">{node.leftHandle ? node.name : ''}</span>
+          </button>
+        ) : (
+          <div className="flex items-center gap-1 min-w-0">
+            <span className="w-3 shrink-0" />
+            <span className="shrink-0 text-sm opacity-90">{getFileIcon(node.name)}</span>
+            <span className="truncate text-[13px] text-[#e5e7eb] font-medium">{node.leftHandle ? node.name : ''}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center justify-center text-center">
+        {!node.isDirectory && <span className={`text-xs font-semibold ${meta.cls}`}>{meta.sym}</span>}
+      </div>
+
+      <div
+        className={`min-w-0 flex items-center justify-end gap-1.5 px-2 py-1 rounded-sm ${rightSelected ? 'bg-[#bb8009]/20 ring-1 ring-inset ring-[#bb8009]/40' : ''}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (node.rightHandle && !node.isDirectory) data.onSelectRight(node);
+        }}
+      >
+        {node.isDirectory ? (
+          <div className="flex items-center gap-1 min-w-0 text-right justify-end">
+            <span className="truncate text-[13px] text-[#e5e7eb] font-medium">{node.rightHandle ? node.name : ''}</span>
+            <span className="shrink-0">📁</span>
+            <span className="text-[10px] text-[#6b7280] w-3 shrink-0">{node.expanded ? '▾' : '▸'}</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1 min-w-0 justify-end">
+            <span className="truncate text-[13px] text-[#e5e7eb] font-medium">{node.rightHandle ? node.name : ''}</span>
+            <span className="shrink-0 text-sm opacity-90">{node.rightHandle ? getFileIcon(node.name) : ''}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function filterTree(nodes: FolderTreeNode[], statusFilter: StatusFilter, filesOnlyMode: boolean): FolderTreeNode[] {
+  let result = nodes;
+  if (statusFilter !== 'all') {
+    result = result.filter(node => node.isDirectory || node.status === statusFilter);
+  }
+  if (filesOnlyMode) {
+    result = result.filter(node => !node.isDirectory);
+  } else {
+    result = result.map(node => node.isDirectory ? { ...node, children: filterTree(node.children, statusFilter, filesOnlyMode) } : node);
+  }
+  return result;
+}
+
+function sortTree(nodes: FolderTreeNode[], sortBy: SortBy, sortOrder: SortOrder): FolderTreeNode[] {
+  const mul = sortOrder === 'asc' ? 1 : -1;
+  const sorted = [...nodes].sort((a, b) => {
+    if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
+    let cmp = 0;
+    if (sortBy === 'name') cmp = a.name.localeCompare(b.name);
+    if (sortBy === 'size') cmp = (a.leftSize ?? a.rightSize ?? 0) - (b.leftSize ?? b.rightSize ?? 0);
+    if (sortBy === 'modified') cmp = (a.leftDate?.getTime() ?? a.rightDate?.getTime() ?? 0) - (b.leftDate?.getTime() ?? b.rightDate?.getTime() ?? 0);
+    return cmp * mul;
+  });
+  return sorted.map(node => node.isDirectory ? { ...node, children: sortTree(node.children, sortBy, sortOrder) } : node);
+}
+
+const STATUS_META: Record<string, { sym: string; cls: string }> = {
+  same: { sym: '✓', cls: 'text-[#56d364]' },
+  different: { sym: '✕', cls: 'text-[#f85149]' },
+  'left-only': { sym: '◀', cls: 'text-[#79c0ff]' },
+  'right-only': { sym: '▶', cls: 'text-[#56d364]' },
+};
+
+const ROW_BG: Record<string, string> = {
+  same: 'hover:bg-[rgba(255,255,255,0.02)]',
+  different: 'bg-[rgba(248,81,73,0.07)] hover:bg-[rgba(248,81,73,0.13)]',
+  'left-only': 'bg-[rgba(121,192,255,0.07)] hover:bg-[rgba(121,192,255,0.13)]',
+  'right-only': 'bg-[rgba(86,211,100,0.07)] hover:bg-[rgba(86,211,100,0.13)]',
+};
