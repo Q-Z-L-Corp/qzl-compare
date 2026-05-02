@@ -59,6 +59,7 @@ type WorkspaceTabData = FolderTabData | FileTabData;
 
 let toastId = 0;
 const ROW_HEIGHT = 30;
+const EMPTY_SELECTION_ITEMS: CompareSelectionItem[] = [];
 
 export default function FolderComparePage() {
   const router = useRouter();
@@ -139,7 +140,18 @@ export default function FolderComparePage() {
   const activeRightLabel = activeFolderState?.rightLabel ?? '';
   const activeTreeNodes = activeFolderState?.treeNodes ?? [];
   const activeIgnoredDirNames = activeFolderState?.ignoredDirNames ?? [];
-  const activeSelectionItems = activeFolderState?.selectedItems ?? [];
+  const activeSelectionItems = activeFolderState?.selectedItems ?? EMPTY_SELECTION_ITEMS;
+
+  const longPressGuide = useMemo(() => {
+    if (!activeTab || activeTab.type !== 'folder') return '';
+    if (activeSelectionItems.length === 0) {
+      return 'Long-press and hold a file/folder to select it for compare';
+    }
+    const first = activeSelectionItems[0];
+    const kind = first.isDirectory ? 'folder' : 'file';
+    const itemName = first.path.split('/').pop() || first.path;
+    return `1/2 selected (${kind}: ${itemName}) - long-press another ${kind} to compare`;
+  }, [activeTab, activeSelectionItems]);
 
   useEffect(() => {
     if (!activeTab || activeTab.type !== 'folder') return;
@@ -409,6 +421,7 @@ export default function FolderComparePage() {
           selectedItems: [nextItem],
         },
       }));
+      addToast(`Selected ${nextItem.isDirectory ? 'folder' : 'file'}: ${nextItem.path}. Long-press another ${nextItem.isDirectory ? 'folder' : 'file'} to compare.`, 'info');
       return;
     }
 
@@ -513,9 +526,11 @@ export default function FolderComparePage() {
         <ToolBtn icon="R" label="Right only" active={statusFilter === 'right-only'} onClick={() => setStatusFilter('right-only')} />
         <ToolBtn icon="📄" label="Files only" active={filesOnlyMode} onClick={() => setFilesOnlyMode(v => !v)} />
         <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
-        <span className="px-2 text-[11px] text-[#6b7280] select-none whitespace-nowrap">
-          Long-press two same-type items to compare
-        </span>
+        {activeTab?.type === 'folder' && (
+          <span className="px-2 text-[11px] text-[#9ca3af] select-none whitespace-nowrap">
+            {longPressGuide}
+          </span>
+        )}
         <ToolBtn icon="⚙️" label="Filters" onClick={() => setShowFilterDialog(true)} />
         {activeFileTab && (
           <>
@@ -917,8 +932,6 @@ function CompareRow({ index, style, ...data }: RowComponentProps<{
   const leftSelected = data.selectedItems.some(item => item.key === `left:${node.path}`);
   const rightSelected = data.selectedItems.some(item => item.key === `right:${node.path}`);
   const longPressTimerRef = useRef<number | null>(null);
-  const longPressSideRef = useRef<SelectionSide | null>(null);
-  const longPressTriggeredRef = useRef(false);
 
   const clearLongPressTimer = () => {
     if (longPressTimerRef.current !== null) {
@@ -931,17 +944,13 @@ function CompareRow({ index, style, ...data }: RowComponentProps<{
     if (event.pointerType === 'mouse' && event.button !== 0) return;
     if ((side === 'left' && !hasLeft) || (side === 'right' && !hasRight)) return;
     clearLongPressTimer();
-    longPressTriggeredRef.current = false;
-    longPressSideRef.current = side;
     longPressTimerRef.current = window.setTimeout(() => {
-      longPressTriggeredRef.current = true;
       data.onSelectItem(side, node);
     }, 450);
   };
 
   const cancelLongPress = () => {
     clearLongPressTimer();
-    longPressSideRef.current = null;
   };
 
   return (
