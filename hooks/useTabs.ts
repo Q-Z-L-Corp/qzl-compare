@@ -24,7 +24,7 @@ export function useTabs<TData>({
   const persisted = useMemo(() => {
     if (!persistKey || typeof window === 'undefined') return null;
     try {
-      const raw = window.localStorage.getItem(persistKey);
+      const raw = window.sessionStorage.getItem(persistKey);
       if (!raw) return null;
       const parsed = JSON.parse(raw) as { tabs: CompareTab<TData>[]; activeTabId: string };
       if (!parsed.tabs?.length) return null;
@@ -40,7 +40,7 @@ export function useTabs<TData>({
   useEffect(() => {
     if (!persistKey) return;
     try {
-      localStorage.setItem(persistKey, JSON.stringify({ tabs, activeTabId }));
+      sessionStorage.setItem(persistKey, JSON.stringify({ tabs, activeTabId }));
     } catch {
       // Ignore storage quota and privacy mode errors.
     }
