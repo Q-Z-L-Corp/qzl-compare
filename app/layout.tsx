@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { Analytics } from "@vercel/analytics/next";
 import './globals.css';
 import FeedbackWidget from '@/components/FeedbackWidget';
 
@@ -123,6 +124,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="h-full bg-[#12161c] text-[#e5e7eb] antialiased selection:bg-[#cc3333] selection:text-white overflow-hidden">
         {children}
         <FeedbackWidget />
+        <Analytics />
       </body>
     </html>
   );
