@@ -7,6 +7,7 @@ import { computeLineDiff } from '@/lib/diff';
 import { countLines } from '@/lib/formatters';
 import { isMinorDiff } from '@/lib/utils';
 import TextCompareView from '@/components/TextCompareView';
+import type { InlineDiffToolState } from '@/components/InlineDiffEditor';
 import MenuBar, { type MenuDefinition } from '@/components/MenuBar';
 import ToolBtn from '@/components/ToolBtn';
 import Toast from '@/components/Toast';
@@ -47,6 +48,7 @@ export default function TextComparePage() {
   const [showOptions, setShowOptions] = useState(false);
   const [showAbout, setShowAbout]     = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [inlineTools, setInlineTools] = useState<InlineDiffToolState | null>(null);
 
   const [fsApiSupported, setFsApiSupported] = useState(false);
   useEffect(() => { setFsApiSupported('showOpenFilePicker' in window); }, []);
@@ -260,6 +262,7 @@ export default function TextComparePage() {
   }
 
   const hasDiffs = diffCount > 0;
+  const showInlineTools = !!inlineTools && (inlineTools.canUndo || inlineTools.canRedo);
 
   // ── Menu definitions ──────────────────────────────────────────────────────
   const menus: MenuDefinition[] = useMemo(() => [
@@ -369,6 +372,18 @@ export default function TextComparePage() {
         <ToolBtn icon="→" label="Copy" onClick={() => { handleRightChange(textRef.current.left);  addToast('Copied left → right', 'success'); }} disabled={!leftText}  title="Copy left → right (Ctrl+L)" accent />
         <ToolBtn icon="←" label="Copy" onClick={() => { handleLeftChange(textRef.current.right);  addToast('Copied right → left', 'success'); }} disabled={!rightText} title="Copy right → left (Ctrl+R)" accent />
 
+        {showInlineTools && inlineTools && (
+          <>
+            <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+            {(inlineTools.canUndo || inlineTools.canRedo) && (
+              <>
+                <ToolBtn icon="↶" label="Undo" onClick={inlineTools.undo} disabled={!inlineTools.canUndo} title="Undo (Ctrl/Cmd+Z)" />
+                <ToolBtn icon="↷" label="Redo" onClick={inlineTools.redo} disabled={!inlineTools.canRedo} title="Redo (Ctrl/Cmd+Y / Ctrl/Cmd+Shift+Z)" />
+              </>
+            )}
+          </>
+        )}
+
         <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
 
         {/* Section navigation */}
@@ -450,6 +465,7 @@ export default function TextComparePage() {
           onLoadLeft={() => loadFromFile('left')}
           onLoadRight={() => loadFromFile('right')}
           fsApiSupported={fsApiSupported}
+          onToolStateChange={setInlineTools}
           defaultShowEditors={true}
         />
       </main>

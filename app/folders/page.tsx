@@ -13,6 +13,7 @@ import MenuBar, { type MenuDefinition } from '@/components/MenuBar';
 import ToolBtn from '@/components/ToolBtn';
 import LoadingView from '@/components/LoadingView';
 import TextCompareView from '@/components/TextCompareView';
+import type { InlineDiffToolState } from '@/components/InlineDiffEditor';
 import Toast from '@/components/Toast';
 import TabBar from '@/components/TabBar';
 import TabContent from '@/components/TabContent';
@@ -79,6 +80,7 @@ export default function FolderComparePage() {
   const [fsApiSupported, setFsApiSupported] = useState(false);
   const [filterConfig, setFilterConfig] = useState<FileFilterConfig>({ includePatterns: '', excludePatterns: '' });
   const [showFilterDialog, setShowFilterDialog] = useState(false);
+  const [inlineTools, setInlineTools] = useState<InlineDiffToolState | null>(null);
 
   const comparisonOptions = useMemo<ComparisonOptions>(() => ({
     ignoreWhitespace: 'none',
@@ -447,6 +449,11 @@ export default function FolderComparePage() {
   }, [activeTab]);
 
   const activeDiffCount = activeFileTab?.data?.diffCount ?? 0;
+  const showInlineTools = !!inlineTools && (inlineTools.canUndo || inlineTools.canRedo);
+
+  useEffect(() => {
+    if (!activeFileTab) setInlineTools(null);
+  }, [activeFileTab]);
 
   const updateActiveFileTabSide = useCallback((side: 'left' | 'right', text: string) => {
     if (!activeFileTab?.data) return;
@@ -518,6 +525,19 @@ export default function FolderComparePage() {
         <ToolBtn icon="📂" label="Open Left" onClick={() => openFolder('left')} />
         <ToolBtn icon="📂" label="Open Right" onClick={() => openFolder('right')} />
         <ToolBtn icon="↻" label="Refresh" onClick={refreshFolders} disabled={!activeLeftDir && !activeRightDir} />
+
+        {showInlineTools && inlineTools && (
+          <>
+            <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+            {(inlineTools.canUndo || inlineTools.canRedo) && (
+              <>
+                <ToolBtn icon="↶" label="Undo" onClick={inlineTools.undo} disabled={!inlineTools.canUndo} title="Undo (Ctrl/Cmd+Z)" />
+                <ToolBtn icon="↷" label="Redo" onClick={inlineTools.redo} disabled={!inlineTools.canRedo} title="Redo (Ctrl/Cmd+Y / Ctrl/Cmd+Shift+Z)" />
+              </>
+            )}
+          </>
+        )}
+
         <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
         <ToolBtn icon="≠" label="Diffs" active={statusFilter === 'different'} onClick={() => setStatusFilter('different')} />
         <ToolBtn icon="✱" label="All" active={statusFilter === 'all'} onClick={() => setStatusFilter('all')} />
@@ -656,6 +676,7 @@ export default function FolderComparePage() {
                   onLoadLeft={() => openFolder('left')}
                   onLoadRight={() => openFolder('right')}
                   fsApiSupported={fsApiSupported}
+                  onToolStateChange={setInlineTools}
                 />
               );
             }}

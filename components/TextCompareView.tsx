@@ -1,7 +1,7 @@
 'use client';
 
 import type { DiffOp } from '@/types';
-import InlineDiffEditor from './InlineDiffEditor';
+import InlineDiffEditor, { type InlineDiffToolState } from './InlineDiffEditor';
 
 interface TextCompareViewProps {
   ops: DiffOp[];
@@ -16,6 +16,7 @@ interface TextCompareViewProps {
   onLoadLeft: () => void;
   onLoadRight: () => void;
   fsApiSupported: boolean;
+  onToolStateChange?: (state: InlineDiffToolState | null) => void;
   /** Unused — kept for API compatibility */
   defaultShowEditors?: boolean;
 }
@@ -28,6 +29,7 @@ export default function TextCompareView({
   onSaveLeft, onSaveRight,
   onLoadLeft, onLoadRight,
   fsApiSupported,
+  onToolStateChange,
 }: TextCompareViewProps) {
   return (
     <InlineDiffEditor
@@ -43,6 +45,7 @@ export default function TextCompareView({
       onLoadLeft={onLoadLeft}
       onLoadRight={onLoadRight}
       fsApiSupported={fsApiSupported}
+      onToolStateChange={onToolStateChange}
     />
   );
 }

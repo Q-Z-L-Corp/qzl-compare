@@ -27,6 +27,9 @@ const FILE_SHORTCUTS: ShortcutGroup[] = [
     entries: [
       { keys: ['Alt', '→'],       description: 'Copy diff line at cursor → right' },
       { keys: ['Alt', '←'],       description: 'Copy diff line at cursor → left' },
+      { keys: ['Ctrl', 'Z'],      description: 'Undo last edit action' },
+      { keys: ['Ctrl', 'Y'],      description: 'Redo last undone action' },
+      { keys: ['Ctrl', 'Shift', 'Z'], description: 'Redo (alternate)' },
       { keys: ['Ctrl', 'L'],      description: 'Copy entire left content to right' },
       { keys: ['Ctrl', 'R'],      description: 'Copy entire right content to left' },
     ],
@@ -53,6 +56,9 @@ const TEXT_SHORTCUTS: ShortcutGroup[] = [
     entries: [
       { keys: ['Alt', '→'],       description: 'Copy diff line at cursor → right' },
       { keys: ['Alt', '←'],       description: 'Copy diff line at cursor → left' },
+      { keys: ['Ctrl', 'Z'],      description: 'Undo last edit action' },
+      { keys: ['Ctrl', 'Y'],      description: 'Redo last undone action' },
+      { keys: ['Ctrl', 'Shift', 'Z'], description: 'Redo (alternate)' },
     ],
   },
   {

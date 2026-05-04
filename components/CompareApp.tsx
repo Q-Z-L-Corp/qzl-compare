@@ -73,7 +73,7 @@ export default function CompareApp() {
     if (diffViewMode === 'unified') {
       unifiedDiffRef.current?.scrollToDiff(idx);
     } else {
-      scrollToDiff(idx);
+      fileDiffRef.current?.scrollToDiff(idx);
     }
   }
 

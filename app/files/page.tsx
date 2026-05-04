@@ -8,6 +8,7 @@ import { countLines, formatSize } from '@/lib/formatters';
 import { isMinorDiff } from '@/lib/utils';
 import FileDiffView, { FileDiffViewHandle } from '@/components/FileDiffView';
 import TextCompareView from '@/components/TextCompareView';
+import type { InlineDiffToolState } from '@/components/InlineDiffEditor';
 import MenuBar, { type MenuDefinition } from '@/components/MenuBar';
 import LoadingView from '@/components/LoadingView';
 import ToolBtn from '@/components/ToolBtn';
@@ -45,9 +46,13 @@ export default function FileComparePage() {
   const [showOptions, setShowOptions] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [inlineTools, setInlineTools] = useState<InlineDiffToolState | null>(null);
 
   const [fsApiSupported, setFsApiSupported] = useState(false);
   useEffect(() => { setFsApiSupported('showOpenFilePicker' in window); }, []);
+  useEffect(() => {
+    if (view !== 'diff' || !useTextCompareView) setInlineTools(null);
+  }, [view, useTextCompareView]);
 
   const fileDiffRef = useRef<FileDiffViewHandle>(null);
 
@@ -314,6 +319,7 @@ export default function FileComparePage() {
 
   const hasDiffs = diffCount > 0;
   const showSync = !!leftFile && !!rightFile;
+  const showInlineTools = !!inlineTools && (inlineTools.canUndo || inlineTools.canRedo);
 
   const updateOption = <K extends keyof ComparisonOptions>(key: K, value: ComparisonOptions[K]) => {
     setComparisonOptions(prev => ({ ...prev, [key]: value }));
@@ -419,6 +425,18 @@ export default function FileComparePage() {
         {/* Copy */}
         <ToolBtn icon="→" label="Copy" onClick={() => copyFile('left', 'right')} disabled={!showSync} title="Copy left → right (Ctrl+L)" accent />
         <ToolBtn icon="←" label="Copy" onClick={() => copyFile('right', 'left')} disabled={!showSync} title="Copy right → left (Ctrl+R)" accent />
+
+        {showInlineTools && inlineTools && (
+          <>
+            <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+            {(inlineTools.canUndo || inlineTools.canRedo) && (
+              <>
+                <ToolBtn icon="↶" label="Undo" onClick={inlineTools.undo} disabled={!inlineTools.canUndo} title="Undo (Ctrl/Cmd+Z)" />
+                <ToolBtn icon="↷" label="Redo" onClick={inlineTools.redo} disabled={!inlineTools.canRedo} title="Redo (Ctrl/Cmd+Y / Ctrl/Cmd+Shift+Z)" />
+              </>
+            )}
+          </>
+        )}
 
         <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
 
@@ -543,6 +561,7 @@ export default function FileComparePage() {
             onLoadLeft={() => openFile('left')}
             onLoadRight={() => openFile('right')}
             fsApiSupported={fsApiSupported}
+            onToolStateChange={setInlineTools}
           />
         )}
         {view === 'diff' && !useTextCompareView && (
