@@ -17,6 +17,8 @@ import type { InlineDiffToolState } from '@/components/InlineDiffEditor';
 import Toast from '@/components/Toast';
 import TabBar from '@/components/TabBar';
 import TabContent from '@/components/TabContent';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import EmptyState from '@/components/EmptyState';
 
 type SortBy = 'name' | 'size' | 'modified';
 type SortOrder = 'asc' | 'desc';
@@ -511,6 +513,31 @@ export default function FolderComparePage() {
   ], [router, refreshFolders, openFolder, activeLeftDir, activeRightDir, activateNext, activatePrevious, activeTab, closeTab]);
 
   return (
+    <ErrorBoundary fallback={(error, reset) => (
+      <div className="flex h-screen bg-[#1a1a1a]">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-md">
+            <div className="text-5xl mb-4">⚠️</div>
+            <h2 className="text-xl font-bold text-[#e5e7eb] mb-2">Comparison Error</h2>
+            <p className="text-gray-400 text-sm mb-6 break-words">{error.message}</p>
+            <div className="flex gap-2 justify-center">
+              <button
+                onClick={reset}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition"
+              >
+                Try Again
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded font-medium transition"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}>
     <div className="flex flex-col h-screen overflow-hidden">
       <header className="flex items-center h-10 px-4 bg-[#12161c] border-b border-[#4b5563] shrink-0">
         <div className="flex items-center gap-2 text-[#cc3333] font-bold text-sm select-none">
@@ -720,6 +747,7 @@ export default function FolderComparePage() {
         </div>
       )}
     </div>
+    </ErrorBoundary>
   );
 }
 

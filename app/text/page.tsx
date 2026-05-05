@@ -12,6 +12,8 @@ import MenuBar, { type MenuDefinition } from '@/components/MenuBar';
 import ToolBtn from '@/components/ToolBtn';
 import Toast from '@/components/Toast';
 import KeyboardShortcutsModal from '@/components/KeyboardShortcutsModal';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import EmptyState from '@/components/EmptyState';
 
 type DiffFilter = 'all' | 'diffs' | 'same' | 'context';
 
@@ -333,6 +335,31 @@ export default function TextComparePage() {
   ], [diffFilter, comparisonOptions, leftText, rightText, fsApiSupported, router]);
 
   return (
+    <ErrorBoundary fallback={(error, reset) => (
+      <div className="flex h-screen bg-[#1a1a1a]">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-md">
+            <div className="text-5xl mb-4">⚠️</div>
+            <h2 className="text-xl font-bold text-[#e5e7eb] mb-2">Comparison Error</h2>
+            <p className="text-gray-400 text-sm mb-6 break-words">{error.message}</p>
+            <div className="flex gap-2 justify-center">
+              <button
+                onClick={reset}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition"
+              >
+                Try Again
+              </button>
+              <button
+                onClick={() => { setLeftText(''); setRightText(''); setDiffOps([]); }}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded font-medium transition"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}>
     <div className="flex flex-col h-screen overflow-hidden">
 
       {/* Title bar */}
@@ -500,5 +527,6 @@ export default function TextComparePage() {
         </div>
       )}
     </div>
+    </ErrorBoundary>
   );
 }

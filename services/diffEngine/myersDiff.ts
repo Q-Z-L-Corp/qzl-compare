@@ -1,3 +1,27 @@
+/**
+ * Diff Engine using Myers' Longest Common Subsequence (LCS) Algorithm
+ *
+ * This module provides line-by-line and character-level diff operations for comparing text files.
+ *
+ * Algorithm Overview:
+ * - Uses the 'diff' package's Myers algorithm implementation (O(n+m) average case)
+ * - Normalizes lines based on ComparisonOptions before comparison
+ * - Intelligently merges adjacent delete/insert operations into 'replace' operations
+ * - Preserves original line text in results while comparing normalized versions
+ *
+ * Normalization:
+ * - ignoreWhitespace: 'none' | 'trailing' | 'all' | 'changes'
+ * - caseSensitive: true | false
+ * - ignoreLineEndings: CRLF/LF/CR normalization
+ *
+ * Output:
+ * - DiffOp[]: Array of diff operations (equal, insert, delete, replace)
+ * - InlineDiffOp[]: Character-level diffs within a single line
+ *
+ * References:
+ * - Myers, E. W. (1986). "An O(ND) difference algorithm and its variations"
+ */
+
 import { diffArrays, diffWordsWithSpace } from 'diff';
 import type { ComparisonOptions, DiffOp, InlineDiffOp } from '@/types';
 

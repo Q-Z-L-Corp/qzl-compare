@@ -14,6 +14,8 @@ import LoadingView from '@/components/LoadingView';
 import ToolBtn from '@/components/ToolBtn';
 import Toast from '@/components/Toast';
 import KeyboardShortcutsModal from '@/components/KeyboardShortcutsModal';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import EmptyState from '@/components/EmptyState';
 
 type ViewState = 'empty' | 'loading' | 'diff';
 type DiffFilter = 'all' | 'diffs' | 'same' | 'context';
@@ -388,6 +390,31 @@ export default function FileComparePage() {
   ], [diffFilter, comparisonOptions, leftFile, rightFile, showSync, router]);
 
   return (
+    <ErrorBoundary fallback={(error, reset) => (
+      <div className="flex h-screen bg-[#1a1a1a]">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-md">
+            <div className="text-5xl mb-4">⚠️</div>
+            <h2 className="text-xl font-bold text-[#e5e7eb] mb-2">Comparison Error</h2>
+            <p className="text-gray-400 text-sm mb-6 break-words">{error.message}</p>
+            <div className="flex gap-2 justify-center">
+              <button
+                onClick={reset}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition"
+              >
+                Try Again
+              </button>
+              <button
+                onClick={() => { setLeftFile(null); setRightFile(null); setDiffOps([]); setView('empty'); }}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded font-medium transition"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}>
     <div className="flex flex-col h-screen overflow-hidden">
       {/* Title bar */}
       <header className="flex items-center h-10 px-4 bg-[#12161c] border-b border-[#4b5563] shrink-0">
@@ -527,24 +554,19 @@ export default function FileComparePage() {
       {/* Main content */}
       <main className="flex-1 overflow-hidden flex flex-col bg-[#181d24]">
         {view === 'empty' && (
-          <div className="flex items-center justify-center h-full text-[#6b7280]">
-            <div className="text-center">
-              <div className="text-5xl mb-4">📄</div>
-              <p className="text-lg font-semibold text-[#9ca3af] mb-2">File Compare</p>
-              <p className="text-sm mb-6">Open two files to compare them side by side</p>
-              {fsApiSupported ? (
-                <div className="flex gap-3 justify-center">
-                  <button onClick={() => openFile('left')} className="btn gap-1.5">📂 Open Left File</button>
-                  <button onClick={() => openFile('right')} className="btn gap-1.5">📂 Open Right File</button>
-                </div>
-              ) : (
-                <div className="max-w-md p-4 bg-[#3a2a1e] border-2 border-[#e08c4b] rounded-lg text-[#e08c4b] text-sm text-left">
-                  <p className="font-semibold mb-1">⚠️ Browser Not Supported</p>
-                  Use Chrome, Edge, or another Chromium-based browser for file comparison.
-                </div>
-              )}
-            </div>
-          </div>
+          <EmptyState
+            icon="📄"
+            title="File Compare"
+            description="Select two files to compare them side by side"
+            action={fsApiSupported ? {
+              label: '📂 Open Files',
+              onClick: () => openFile('left'),
+            } : undefined}
+            secondaryAction={fsApiSupported ? {
+              label: '📂 Open Right',
+              onClick: () => openFile('right'),
+            } : undefined}
+          />
         )}
         {view === 'loading' && <LoadingView />}
         {view === 'diff' && useTextCompareView && leftFile && rightFile && (
@@ -603,6 +625,7 @@ export default function FileComparePage() {
         </div>
       )}
     </div>
+    </ErrorBoundary>
   );
 }
 
