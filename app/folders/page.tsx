@@ -73,6 +73,7 @@ export default function FolderComparePage() {
   const [filesOnlyMode, setFilesOnlyMode] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [searchQuery, setSearchQuery] = useState('');
   const [loadingMsg, setLoadingMsg] = useState('Scanning folders…');
   const [isLoading, setIsLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState('Ready — select folders to compare');
@@ -571,6 +572,19 @@ export default function FolderComparePage() {
         <ToolBtn icon="=" label="Same" active={statusFilter === 'same'} onClick={() => setStatusFilter('same')} />
         <ToolBtn icon="L" label="Left only" active={statusFilter === 'left-only'} onClick={() => setStatusFilter('left-only')} />
         <ToolBtn icon="R" label="Right only" active={statusFilter === 'right-only'} onClick={() => setStatusFilter('right-only')} />
+        <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+        {/* Search input */}
+        <input
+          type="text"
+          placeholder="🔍 Filter by name..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="h-6 px-2 text-xs bg-[#252d37] text-[#e5e7eb] border border-[#4b5563]/60 rounded
+                     placeholder:text-[#6b7280] focus:outline-none focus:border-[#cc3333]
+                     transition-colors"
+          title="Search files by name (case-insensitive)"
+        />
+        <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
         <ToolBtn icon="📄" label="Files only" active={filesOnlyMode} onClick={() => setFilesOnlyMode(v => !v)} />
         <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
         {activeTab?.type === 'folder' && (
@@ -625,6 +639,7 @@ export default function FolderComparePage() {
                 ignoredDirNames={activeIgnoredDirNames}
                 statusFilter={statusFilter}
                 filesOnlyMode={filesOnlyMode}
+                searchQuery={searchQuery}
                 sortBy={sortBy}
                 sortOrder={sortOrder}
                 onSortChange={(nextSortBy) => {
@@ -857,6 +872,7 @@ function FolderTreeWorkspace({
   ignoredDirNames,
   statusFilter,
   filesOnlyMode,
+  searchQuery,
   sortBy,
   sortOrder,
   selectedItems,
@@ -871,6 +887,7 @@ function FolderTreeWorkspace({
   ignoredDirNames: string[];
   statusFilter: StatusFilter;
   filesOnlyMode: boolean;
+  searchQuery: string;
   sortBy: SortBy;
   sortOrder: SortOrder;
   selectedItems: CompareSelectionItem[];
@@ -910,9 +927,9 @@ function FolderTreeWorkspace({
 
   const sortedAndFlattened = useMemo(() => {
     const sorted = sortTree(scopedNodes, sortBy, sortOrder);
-    const filtered = filterTree(sorted, statusFilter, filesOnlyMode);
+    const filtered = filterTree(sorted, statusFilter, filesOnlyMode, searchQuery);
     return flattenNodes(filtered);
-  }, [scopedNodes, sortBy, sortOrder, statusFilter, filesOnlyMode]);
+  }, [scopedNodes, sortBy, sortOrder, statusFilter, filesOnlyMode, searchQuery]);
 
   const itemData = useMemo(() => ({
     rows: sortedAndFlattened,
@@ -1077,15 +1094,33 @@ function CompareRow({ index, style, ...data }: RowComponentProps<{
   );
 }
 
-function filterTree(nodes: FolderTreeNode[], statusFilter: StatusFilter, filesOnlyMode: boolean): FolderTreeNode[] {
+function filterTree(nodes: FolderTreeNode[], statusFilter: StatusFilter, filesOnlyMode: boolean, searchQuery: string = ''): FolderTreeNode[] {
   let result = nodes;
   if (statusFilter !== 'all') {
     result = result.filter(node => node.isDirectory || node.status === statusFilter);
   }
   if (filesOnlyMode) {
     result = result.filter(node => !node.isDirectory);
-  } else {
-    result = result.map(node => node.isDirectory ? { ...node, children: filterTree(node.children, statusFilter, filesOnlyMode) } : node);
+  }
+  // Search filter: match file names/paths containing search query (case-insensitive)
+  if (searchQuery.trim()) {
+    const query = searchQuery.toLowerCase();
+    result = result.filter(node =>
+      node.name.toLowerCase().includes(query) ||
+      (node.path && node.path.toLowerCase().includes(query))
+    );
+  }
+  // Recursively apply filters to children, keeping parents if children match
+  result = result.map(node => {
+    if (node.isDirectory && node.children) {
+      const filteredChildren = filterTree(node.children, statusFilter, filesOnlyMode, searchQuery);
+      return { ...node, children: filteredChildren };
+    }
+    return node;
+  });
+  // Remove directories with no matching children
+  if (searchQuery.trim()) {
+    result = result.filter(node => !node.isDirectory || (node.children && node.children.length > 0));
   }
   return result;
 }
