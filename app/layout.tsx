@@ -3,6 +3,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import './globals.css';
 import FeedbackWidget from '@/components/FeedbackWidget';
+import Script from 'next/script';
 
 const BASE_URL = 'https://compare.qz-l.com';
 
@@ -121,6 +122,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteLd) }}
         />
+        {/* Monetag in-page push tag */}
+        <Script id="monetag-in-page-push" strategy="afterInteractive">
+          {`(function(s){s.dataset.zone='12172421',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`}
+        </Script>
       </head>
       <body className="h-full bg-[#12161c] text-[#e5e7eb] antialiased selection:bg-[#cc3333] selection:text-white overflow-hidden">
         {children}
