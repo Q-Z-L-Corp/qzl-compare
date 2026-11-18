@@ -127,6 +127,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Script id="monetag-in-page-push" strategy="afterInteractive">
           {`(function(s){s.dataset.zone='12172421',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`}
         </Script>
+        {/* Adsterra social bar */}
+        <Script id="adsterra-social-bar" strategy="afterInteractive">
+          {`(function(s){s.dataset.zone='12172421',s.src='https://bauval.org/14/6ea03aae32b109158dee52a286058c02'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`}
+        </Script>
+        <Script
+          src="https://bauval.org/14/6ea03aae32b109158dee52a286058c02"
+          strategy="afterInteractive"
+          data-cfasync="false"
+        />
       </head>
       <body className="h-full antialiased selection:bg-[#66a8ff] selection:text-[#07121d] overflow-hidden">
         {children}
