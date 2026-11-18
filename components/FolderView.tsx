@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Badge, Tabs } from '@qzlcorp/react';
 import type { FolderItem, FolderFilter } from '@/types';
 import { formatSize, getFileIcon } from '@/lib/formatters';
 
@@ -24,18 +25,18 @@ const FILTER_LABELS: { label: string; value: FolderFilter }[] = [
   { label: 'Same',       value: 'same' },
 ];
 
-const STATUS_META: Record<FolderItem['status'], { sym: string; cls: string; label: string }> = {
-  same:         { sym: '✓',  cls: 'text-[#56d364]',  label: 'Identical' },
-  different:    { sym: '✕',  cls: 'text-[#f85149]',  label: 'Different' },
-  'left-only':  { sym: '◀',  cls: 'text-[#79c0ff]',  label: 'Left only' },
-  'right-only': { sym: '▶',  cls: 'text-[#56d364]',  label: 'Right only' },
+const STATUS_META: Record<FolderItem['status'], { sym: string; label: string; variant: 'success' | 'danger' | 'primary' }> = {
+  same:         { sym: '✓', label: 'Identical', variant: 'success' },
+  different:    { sym: '✕', label: 'Different', variant: 'danger' },
+  'left-only':  { sym: '◀', label: 'Left only', variant: 'primary' },
+  'right-only': { sym: '▶', label: 'Right only', variant: 'success' },
 };
 
 const ROW_BG: Record<FolderItem['status'], string> = {
-  same:         'hover:bg-[rgba(255,255,255,0.02)]',
-  different:    'bg-[rgba(248,81,73,0.07)]  hover:bg-[rgba(248,81,73,0.13)]',
-  'left-only':  'bg-[rgba(121,192,255,0.07)] hover:bg-[rgba(121,192,255,0.13)]',
-  'right-only': 'bg-[rgba(86,211,100,0.07)] hover:bg-[rgba(86,211,100,0.13)]',
+  same:         'folder-row--same',
+  different:    'folder-row--different',
+  'left-only':  'folder-row--left-only',
+  'right-only': 'folder-row--right-only',
 };
 
 
@@ -101,17 +102,17 @@ export default function FolderView({
       : counts.same;
   }
 
-  const SortArrow = ({ col }: { col: SortColumn }) => {
-    if (sortColumn !== col) return <span className="text-[#4b5563]/50">↕</span>;
-    return <span className="text-[#cc3333]">{sortOrder === 'asc' ? '↑' : '↓'}</span>;
+  const handleFilterChange = (value: string) => {
+    const selected = FILTER_LABELS.find(option => option.value === value);
+    if (selected) setFilter(selected.value);
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-[#252d37]">
+    <div className="flex flex-col h-full overflow-hidden bg-[var(--qzl-surface)]">
 
       {/* Ignored dirs banner */}
       {ignoredDirNames.length > 0 && (
-        <div className="flex items-start gap-2 px-4 py-2 bg-[#3a2a1e] border-b border-[#e3b341]/40 text-[#f4c878] text-xs shrink-0">
+        <div className="flex items-start gap-2 px-4 py-2 bg-[var(--qzl-warning-subtle)] border-b border-[var(--qzl-warning)]/40 text-[var(--qzl-warning)] text-xs shrink-0">
           <span className="shrink-0 mt-0.5 text-sm">⚠️</span>
           <span>
             Skipped {ignoredDirNames.length} ignored director{ignoredDirNames.length !== 1 ? 'ies' : 'y'}:{' '}
@@ -121,54 +122,42 @@ export default function FolderView({
       )}
 
       {/* Summary + filter toolbar */}
-      <div className="flex flex-col gap-3 px-4 py-3 bg-[#1e242c] border-b border-[#4b5563] shrink-0">
+      <div className="flex flex-col gap-3 px-4 py-3 bg-[var(--qzl-surface)] border-b border-[var(--qzl-border)] shrink-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex gap-1 flex-wrap">
-            {FILTER_LABELS.map(f => {
-              const cnt = countFor(f.value);
-              const active = filter === f.value;
-              return (
-                <button
-                  key={f.value}
-                  onClick={() => setFilter(f.value)}
-                  className={`px-3 py-1.5 text-sm rounded transition-colors ${
-                    active
-                      ? 'bg-[#cc3333] text-white font-semibold shadow-md'
-                      : 'bg-[#374151] text-[#9ca3af] hover:bg-[#4b5563] border border-[#4b5563]/50'
-                  }`}
-                  title={`Show ${f.label.toLowerCase()} files (${cnt})`}
-                >
-                  {f.label} <span className="font-mono text-xs opacity-70">({cnt})</span>
-                </button>
-              );
-            })}
-          </div>
+          <Tabs
+            items={FILTER_LABELS.map(option => ({
+              value: option.value,
+              label: `${option.label} (${countFor(option.value)})`,
+            }))}
+            value={filter}
+            onValueChange={handleFilterChange}
+          />
         </div>
-        <div className="text-xs text-[#6b7280]">
+        <div className="text-xs text-[var(--qzl-text-soft)]">
           Showing {sorted.length} of {items.length} files • {counts.different} difference{counts.different !== 1 ? 's' : ''}
         </div>
       </div>
 
       {/* Table header */}
-      <div className="flex items-center px-4 py-2 bg-[#181d24] border-b border-[#4b5563] text-xs font-semibold text-[#cc3333] shrink-0 sticky top-0 z-10">
+      <div className="flex items-center px-4 py-2 bg-[var(--qzl-background)] border-b border-[var(--qzl-border)] text-xs font-semibold text-[var(--qzl-primary)] shrink-0 sticky top-0 z-10">
         <div className="flex-1 min-w-0">
-          <button onClick={() => handleSortClick('name')} className="flex items-center gap-1 hover:text-[#e5e7eb] transition-colors">
-            📄 Name <SortArrow col="name" />
+          <button onClick={() => handleSortClick('name')} className="flex items-center gap-1 hover:text-[var(--qzl-text)] transition-colors">
+            📄 Name {sortColumn !== 'name' ? <span className="text-[var(--qzl-border)]/50">↕</span> : <span className="text-[var(--qzl-primary)]">{sortOrder === 'asc' ? '↑' : '↓'}</span>}
           </button>
         </div>
         <div className="w-16 text-right">
-          <button onClick={() => handleSortClick('status')} className="flex items-center justify-end gap-1 ml-auto hover:text-[#e5e7eb] transition-colors">
-            Status <SortArrow col="status" />
+          <button onClick={() => handleSortClick('status')} className="flex items-center justify-end gap-1 ml-auto hover:text-[var(--qzl-text)] transition-colors">
+            Status {sortColumn !== 'status' ? <span className="text-[var(--qzl-border)]/50">↕</span> : <span className="text-[var(--qzl-primary)]">{sortOrder === 'asc' ? '↑' : '↓'}</span>}
           </button>
         </div>
         <div className="w-20 text-right">
-          <button onClick={() => handleSortClick('leftSize')} className="flex items-center justify-end gap-1 ml-auto hover:text-[#e5e7eb] transition-colors text-[11px]">
-            Left <SortArrow col="leftSize" />
+          <button onClick={() => handleSortClick('leftSize')} className="flex items-center justify-end gap-1 ml-auto hover:text-[var(--qzl-text)] transition-colors text-[11px]">
+            Left {sortColumn !== 'leftSize' ? <span className="text-[var(--qzl-border)]/50">↕</span> : <span className="text-[var(--qzl-primary)]">{sortOrder === 'asc' ? '↑' : '↓'}</span>}
           </button>
         </div>
         <div className="w-20 text-right">
-          <button onClick={() => handleSortClick('rightSize')} className="flex items-center justify-end gap-1 ml-auto hover:text-[#e5e7eb] transition-colors text-[11px]">
-            Right <SortArrow col="rightSize" />
+          <button onClick={() => handleSortClick('rightSize')} className="flex items-center justify-end gap-1 ml-auto hover:text-[var(--qzl-text)] transition-colors text-[11px]">
+            Right {sortColumn !== 'rightSize' ? <span className="text-[var(--qzl-border)]/50">↕</span> : <span className="text-[var(--qzl-primary)]">{sortOrder === 'asc' ? '↑' : '↓'}</span>}
           </button>
         </div>
         <div className="w-24 text-right text-[11px]">Actions</div>
@@ -177,7 +166,7 @@ export default function FolderView({
       {/* Items list */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {sorted.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-[#6b7280]">
+          <div className="flex items-center justify-center h-full text-[var(--qzl-text-soft)]">
             <div className="text-center">
               <div className="text-3xl mb-2">📭</div>
               <p>No files to display</p>
@@ -205,31 +194,31 @@ function FolderItemRow({ item, onCompare, onCopyFile }: { item: FolderItem; onCo
 
   return (
     <div 
-      className={`flex items-center px-4 py-2 border-b border-[#2f3842] transition-colors ${ROW_BG[item.status]} ${canCompare ? 'cursor-pointer' : ''}`}
+      className={`flex items-center px-4 py-2 border-b border-[var(--qzl-surface-muted)] transition-colors ${ROW_BG[item.status]} ${canCompare ? 'cursor-pointer' : ''}`}
       onClick={handleRowClick}
     >
       {/* File name */}
       <div className="flex-1 min-w-0 flex items-center gap-2">
         <span className="shrink-0 text-base opacity-90">{getFileIcon(item.path)}</span>
-        <span className="truncate text-sm text-[#e5e7eb] font-medium hover:text-[#cc3333]" title={item.path}>
+        <span className="truncate text-sm text-[var(--qzl-text)] font-medium hover:text-[var(--qzl-primary)]" title={item.path}>
           {fileName}
         </span>
       </div>
 
       {/* Status */}
       <div className="w-16 text-right">
-        <span className={`inline-flex items-center gap-1 text-xs font-semibold ${meta.cls}`} title={meta.label}>
-          <span>{meta.sym}</span>
-        </span>
+        <Badge variant={meta.variant} title={meta.label} aria-label={meta.label}>
+          {meta.sym}
+        </Badge>
       </div>
 
       {/* Left size */}
-      <div className="w-20 text-right text-xs text-[#9ca3af]">
+      <div className="w-20 text-right text-xs text-[var(--qzl-text-muted)]">
         {item.leftSize !== undefined ? formatSize(item.leftSize) : '—'}
       </div>
 
       {/* Right size */}
-      <div className="w-20 text-right text-xs text-[#9ca3af]">
+      <div className="w-20 text-right text-xs text-[var(--qzl-text-muted)]">
         {item.rightSize !== undefined ? formatSize(item.rightSize) : '—'}
       </div>
 
@@ -240,7 +229,7 @@ function FolderItemRow({ item, onCompare, onCopyFile }: { item: FolderItem; onCo
             e.stopPropagation();
             onCompare(item.path);
           }}
-          className="px-2 py-1 text-xs bg-[#374151] text-[#cc3333] hover:bg-[#4b5563] rounded transition-colors"
+          className="px-2 py-1 text-xs bg-[var(--qzl-surface-muted)] text-[var(--qzl-primary)] hover:bg-[var(--qzl-border)] rounded transition-colors"
           title="Compare files"
         >
           🔍
@@ -253,7 +242,7 @@ function FolderItemRow({ item, onCompare, onCopyFile }: { item: FolderItem; onCo
                   e.stopPropagation();
                   onCopyFile(item.path, 'left', 'right');
                 }}
-                className="px-2 py-1 text-xs bg-[#374151] text-[#56d364] hover:bg-[#2a4a2a] rounded transition-colors"
+                className="px-2 py-1 text-xs bg-[var(--qzl-surface-muted)] text-[var(--qzl-success)] hover:bg-[var(--qzl-success-subtle)] rounded transition-colors"
                 title="Copy left → right"
               >
                 ➜
@@ -265,7 +254,7 @@ function FolderItemRow({ item, onCompare, onCopyFile }: { item: FolderItem; onCo
                   e.stopPropagation();
                   onCopyFile(item.path, 'right', 'left');
                 }}
-                className="px-2 py-1 text-xs bg-[#374151] text-[#56d364] hover:bg-[#2a4a2a] rounded transition-colors"
+                className="px-2 py-1 text-xs bg-[var(--qzl-surface-muted)] text-[var(--qzl-success)] hover:bg-[var(--qzl-success-subtle)] rounded transition-colors"
                 title="Copy right ← left"
               >
                 ⬅

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { Button } from '@qzlcorp/react';
 
 interface PanelBarProps {
   leftPath: string;
@@ -24,7 +25,7 @@ export default function PanelBar({
   onDropLeft, onDropRight,
 }: PanelBarProps) {
   return (
-    <div className="grid shrink-0 bg-[#181d24] border-b-2 border-[#4b5563]"
+    <div className="grid shrink-0 bg-[var(--qzl-background)] border-b border-[var(--qzl-border)]"
          style={{ gridTemplateColumns: '1fr 3px 1fr' }}>
       <PanelPathBar
         path={leftPath}
@@ -35,7 +36,7 @@ export default function PanelBar({
         onDrop={onDropLeft}
       />
       {/* Divider */}
-      <div className="bg-[#4b5563]/30" />
+      <div className="bg-[var(--qzl-border)]" />
       <PanelPathBar
         path={rightPath}
         meta={rightMeta}
@@ -99,37 +100,39 @@ function PanelPathBar({ path, meta, onOpen, openLabel, side, onDrop }: PanelPath
 
   return (
     <div
-      className={`flex items-center gap-2 px-4 py-2 border-r border-[#4b5563]/30 overflow-hidden min-h-[48px] last:border-0 transition-colors duration-150 ${
+      className={`flex items-center gap-3 px-4 py-3 overflow-hidden min-h-[64px] transition-colors duration-150 ${
         dragOver
-          ? 'bg-[#1a2e1a] border-2 border-dashed border-[#2ea043]'
-          : 'bg-[#252d37]'
+          ? 'bg-[var(--qzl-success-subtle)] ring-1 ring-inset ring-[var(--qzl-success)]'
+          : 'bg-[var(--qzl-surface)]'
       }`}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      <button 
+      <Button
         onClick={onOpen} 
-        className="btn btn-sm bg-[#374151] hover:bg-[#4b5563] border border-[#4b5563] gap-1.5 shrink-0 text-[13px] font-medium"
+        variant="secondary"
+        size="sm"
+        className="shrink-0"
         title={`Open ${openLabel}`}
       >
         {icon} Open
-      </button>
+      </Button>
       <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
-        <span className="text-[11px] font-bold text-[#cc3333] uppercase tracking-wider select-none">{sideLabel}</span>
+        <span className="text-[11px] font-bold text-[var(--qzl-primary)] uppercase tracking-wider select-none">{sideLabel}</span>
         {dragOver ? (
-          <span className="text-sm text-[#56d364] font-medium italic">Drop file here…</span>
+          <span className="text-sm text-[var(--qzl-success)] font-medium italic">Drop file here…</span>
         ) : (
           <span
-            className={`text-sm truncate leading-tight ${path ? 'text-[#e5e7eb] font-medium' : 'text-[#6b7280] italic'}`}
+            className={`text-sm truncate leading-tight ${path ? 'text-[var(--qzl-text)] font-medium' : 'text-[var(--qzl-text-soft)] italic'}`}
             title={path}
           >
             {path || `Drop a ${openLabel.toLowerCase()} or click Open`}
           </span>
         )}
         {!dragOver && meta && (
-          <span className="text-[11px] text-[#6b7280] leading-tight truncate">{meta}</span>
+          <span className="text-[11px] text-[var(--qzl-text-soft)] leading-tight truncate">{meta}</span>
         )}
       </div>
     </div>

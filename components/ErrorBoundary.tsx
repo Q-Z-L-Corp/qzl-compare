@@ -1,6 +1,7 @@
 'use client';
 
 import React, { ReactNode, Component, ReactElement } from 'react';
+import { Button, Card } from '@qzlcorp/react';
 
 interface Props {
   children: ReactNode;
@@ -40,20 +41,21 @@ export default class ErrorBoundary extends Component<Props, State> {
         return <>{this.props.fallback(this.state.error, this.reset)}</>;
       }
       return (
-        <div className="flex items-center justify-center w-full h-full bg-[#1a1a1a] text-white p-6">
-          <div className="max-w-md text-center">
+        <div className="flex items-center justify-center w-full h-full p-6">
+          <Card className="w-full max-w-md p-8 text-center">
             <div className="text-4xl mb-4">⚠️</div>
-            <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
-            <p className="text-gray-400 text-sm mb-4 break-words">
+            <h2 className="text-xl font-bold mb-2 text-[var(--qzl-text)]">Something went wrong</h2>
+            <p className="text-[var(--qzl-text-muted)] text-sm mb-4 break-words">
               {this.state.error.message || 'An unexpected error occurred'}
             </p>
-            <button
+            <Button
               onClick={this.reset}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition"
+              variant="primary"
+              size="sm"
             >
               Try again
-            </button>
-          </div>
+            </Button>
+          </Card>
         </div>
       );
     }

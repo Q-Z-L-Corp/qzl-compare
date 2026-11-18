@@ -546,7 +546,7 @@ export default function CompareApp() {
         />
       )}
 
-      <main className="flex-1 overflow-hidden flex flex-col bg-[#181d24]">
+      <main className="flex-1 overflow-hidden flex flex-col bg-[var(--qzl-background)]">
         {mode === 'text' ? (
           // ── Text compare layout: diff view with file paths and inline editors ──────
           <>

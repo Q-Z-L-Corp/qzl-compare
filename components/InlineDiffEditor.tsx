@@ -91,37 +91,39 @@ function buildLineStatusMap(ops: DiffOp[], side: Side): Map<number, string> {
 function lineNumBg(status: string | undefined): string {
   switch (status) {
     case 'delete':
-      return 'bg-[#2a1515]';
+      return 'bg-[var(--qzl-danger-subtle)]';
     case 'insert':
-      return 'bg-[#152220]';
+      return 'bg-[var(--qzl-success-subtle)]';
     case 'replace':
-      return 'bg-[#2b1d0a]';
+      return 'bg-[var(--qzl-warning-subtle)]';
     default:
-      return 'bg-[#1e242c]';
+      return 'bg-[var(--qzl-surface)]';
   }
 }
 
 function lineNumColor(status: string | undefined): string {
   switch (status) {
     case 'delete':
-      return 'text-[#f85149]';
+      return 'text-[var(--qzl-danger)]';
     case 'insert':
-      return 'text-[#56d364]';
+      return 'text-[var(--qzl-success)]';
     case 'replace':
-      return 'text-[#e3b341]';
+      return 'text-[var(--qzl-warning)]';
     default:
-      return 'text-[#6b7280]';
+      return 'text-[var(--qzl-text-soft)]';
   }
 }
 
 function lineBg(status: string | undefined, side: Side): string {
   switch (status) {
     case 'delete':
-      return 'rgba(248,81,73,0.12)';
+      return 'color-mix(in srgb, var(--qzl-danger) 12%, transparent)';
     case 'insert':
-      return 'rgba(86,211,100,0.12)';
+      return 'color-mix(in srgb, var(--qzl-success) 12%, transparent)';
     case 'replace':
-      return side === 'left' ? 'rgba(227,179,65,0.12)' : 'rgba(86,211,100,0.12)';
+      return side === 'left'
+        ? 'color-mix(in srgb, var(--qzl-warning) 12%, transparent)'
+        : 'color-mix(in srgb, var(--qzl-success) 12%, transparent)';
     default:
       return 'transparent';
   }
@@ -830,31 +832,31 @@ export default function InlineDiffEditor({
       {/* ── Diff stats bar ────────────────────────────────────────────── */}
       {hasAnyContent && (
         <div
-          className="flex items-center gap-3 px-3 h-8 bg-[#12161c] border-b border-[#2d333b] shrink-0 text-[11px] select-none"
+          className="flex items-center gap-3 px-3 h-8 bg-[var(--qzl-background-strong)] border-b border-[var(--qzl-border)] shrink-0 text-[11px] select-none"
           aria-live="polite"
           aria-label="Diff summary"
         >
           {stats.changed === 0 && stats.added === 0 && stats.removed === 0 ? (
-            <span className="text-[#56d364] font-medium flex items-center gap-1">
+            <span className="text-[var(--qzl-success)] font-medium flex items-center gap-1">
               <span aria-hidden="true">✓</span> Files are identical
             </span>
           ) : (
             <>
-              <span className="text-[#6b7280]">Diff:</span>
+              <span className="text-[var(--qzl-text-soft)]">Diff:</span>
               {stats.changed > 0 && (
-                <span className="flex items-center gap-1 text-[#e3b341]">
+                <span className="flex items-center gap-1 text-[var(--qzl-warning)]">
                   <span aria-hidden="true">~</span>
                   <span>{stats.changed} changed</span>
                 </span>
               )}
               {stats.added > 0 && (
-                <span className="flex items-center gap-1 text-[#56d364]">
+                <span className="flex items-center gap-1 text-[var(--qzl-success)]">
                   <span aria-hidden="true">+</span>
                   <span>{stats.added} added</span>
                 </span>
               )}
               {stats.removed > 0 && (
-                <span className="flex items-center gap-1 text-[#f85149]">
+                <span className="flex items-center gap-1 text-[var(--qzl-danger)]">
                   <span aria-hidden="true">−</span>
                   <span>{stats.removed} removed</span>
                 </span>
@@ -862,15 +864,15 @@ export default function InlineDiffEditor({
             </>
           )}
 
-          <span className="ml-auto text-[#4b5563]">
+          <span className="ml-auto text-[var(--qzl-border)]">
             {countLines(leftText)} / {countLines(rightText)} lines
           </span>
         </div>
       )}
 
       {showStarter ? (
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col bg-[#181d24]">
-          <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 gap-px bg-[#2d333b]">
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col bg-[var(--qzl-background)]">
+          <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 gap-px bg-[var(--qzl-border)]">
             <StarterInputPanel
               side="left"
               text={leftText}
@@ -898,7 +900,7 @@ export default function InlineDiffEditor({
               onDropText={onDropRight}
             />
           </div>
-          <div className="px-4 py-3 border-t border-[#2d333b] text-xs text-[#8b949e] bg-[#12161c]">
+          <div className="px-4 py-3 border-t border-[var(--qzl-border)] text-xs text-[var(--qzl-text-soft)] bg-[var(--qzl-background-strong)]">
             Start by pasting text into either side or load files with the folder/file buttons above.
           </div>
         </div>
@@ -937,8 +939,8 @@ export default function InlineDiffEditor({
           />
 
           {/* ── Gutter block actions ─────────────────────────────────────── */}
-          <div className="bg-[#12161c] border-x border-[#4b5563]/40 overflow-hidden relative flex flex-col">
-            <div className="h-9 bg-[#1e242c] border-b border-[#4b5563] shrink-0" />
+          <div className="bg-[var(--qzl-background-strong)] border-x border-[var(--qzl-border)]/40 overflow-hidden relative flex flex-col">
+            <div className="h-9 bg-[var(--qzl-surface)] border-b border-[var(--qzl-border)] shrink-0" />
             <div className="relative flex-1 overflow-hidden">
               <div ref={gutterRef} style={{ willChange: 'transform' }}>
                 {diffBlocks.map((block) => {
@@ -951,15 +953,15 @@ export default function InlineDiffEditor({
                   return (
                     <div
                       key={block.id}
-                      className="absolute left-0 right-0 border-y border-[#30363d]/70 transition-colors"
+                      className="absolute left-0 right-0 border-y border-[var(--qzl-border)]/70 transition-colors"
                       style={{
                         top,
                         height,
                         background: isFlashed
-                          ? 'rgba(86,211,100,0.20)'
+                          ? 'color-mix(in srgb, var(--qzl-success) 20%, transparent)'
                           : isSelected
-                            ? 'rgba(121,192,255,0.15)'
-                            : 'rgba(255,255,255,0.02)',
+                            ? 'color-mix(in srgb, var(--qzl-primary) 15%, transparent)'
+                            : 'color-mix(in srgb, var(--qzl-surface-muted) 50%, transparent)',
                       }}
                     >
                       <button
@@ -979,8 +981,8 @@ export default function InlineDiffEditor({
                             title="Copy block left → right"
                             aria-label="Copy this block from left to right"
                             className="w-6 h-5 flex items-center justify-center rounded text-[11px] font-bold leading-none
-                                       bg-[#0d2137] text-[#58a6ff] border border-[#1f6feb]/60
-                                       hover:bg-[#1f6feb] hover:text-white hover:border-[#58a6ff]
+                                       bg-[var(--qzl-primary-subtle)] text-[var(--qzl-primary)] border border-[var(--qzl-primary)]/60
+                                       hover:bg-[var(--qzl-primary)] hover:text-white hover:border-[var(--qzl-primary)]
                                        transition-colors cursor-pointer"
                           >
                             →
@@ -995,8 +997,8 @@ export default function InlineDiffEditor({
                             title="Copy block right → left"
                             aria-label="Copy this block from right to left"
                             className="w-6 h-5 flex items-center justify-center rounded text-[11px] font-bold leading-none
-                                       bg-[#211800] text-[#e3b341] border border-[#9e6a03]/60
-                                       hover:bg-[#bb8009] hover:text-white hover:border-[#e3b341]
+                                       bg-[var(--qzl-warning-subtle)] text-[var(--qzl-warning)] border border-[var(--qzl-warning-border)]
+                                       hover:bg-[var(--qzl-warning)] hover:text-white hover:border-[var(--qzl-warning)]
                                        transition-colors cursor-pointer"
                           >
                             ←
@@ -1018,8 +1020,8 @@ export default function InlineDiffEditor({
                         aria-label="Copy selected lines from left to right"
                         className="w-8 h-6 flex items-center justify-center rounded
                                    text-[12px] font-bold leading-none
-                                   bg-[#2a1847] text-[#d2a8ff] border border-[#8250df]/70
-                                   hover:bg-[#8250df] hover:text-white hover:border-[#d2a8ff]
+                                   bg-[var(--qzl-primary-subtle)] text-[var(--qzl-primary)] border border-[var(--qzl-primary-border)]
+                                   hover:bg-[var(--qzl-primary)] hover:text-[var(--qzl-primary-foreground)] hover:border-[var(--qzl-primary)]
                                    transition-colors shadow-sm"
                       >
                         →
@@ -1032,8 +1034,8 @@ export default function InlineDiffEditor({
                         aria-label="Copy selected lines from right to left"
                         className="w-8 h-6 flex items-center justify-center rounded
                                    text-[12px] font-bold leading-none
-                                   bg-[#3a1233] text-[#ff9bce] border border-[#db61a2]/70
-                                   hover:bg-[#db61a2] hover:text-white hover:border-[#ff9bce]
+                                   bg-[var(--qzl-accent)]/10 text-[var(--qzl-accent)] border border-[var(--qzl-accent)]/50
+                                   hover:bg-[var(--qzl-accent)] hover:text-[var(--qzl-background)] hover:border-[var(--qzl-accent)]
                                    transition-colors shadow-sm"
                       >
                         ←
@@ -1075,16 +1077,16 @@ export default function InlineDiffEditor({
       {/* ── Detail panel ────────────────────────────────────────────────── */}
       {showDetail && (
         <div
-          className="border-t-2 border-[#4b5563] shrink-0 overflow-hidden"
+          className="border-t-2 border-[var(--qzl-border)] shrink-0 overflow-hidden"
           style={{ flex: '0 0 160px' }}
         >
-          <div className="flex items-center h-6 px-4 bg-[#161b22] border-b border-[#30363d] text-xs text-[#8b949e] font-semibold uppercase tracking-wider select-none">
+          <div className="flex items-center h-6 px-4 bg-[var(--qzl-background-strong)] border-b border-[var(--qzl-border)] text-xs text-[var(--qzl-text-soft)] font-semibold uppercase tracking-wider select-none">
             <span>Line {selectedLineNum} · {selectedSide} — char diff</span>
-            <span className="ml-3 text-[10px] normal-case font-normal text-[#6b7280]">
-              <span className="bg-[#f85149] text-white px-1 rounded mr-1">removed</span>
-              <span className="bg-[#56d364] text-[#0d1117] px-1 rounded">added</span>
+            <span className="ml-3 text-[10px] normal-case font-normal text-[var(--qzl-text-soft)]">
+              <span className="bg-[var(--qzl-danger)] text-white px-1 rounded mr-1">removed</span>
+              <span className="bg-[var(--qzl-success)] text-[var(--qzl-background-strong)] px-1 rounded">added</span>
             </span>
-            <span className="ml-auto text-[10px] normal-case font-normal text-[#4b5563] italic">follows cursor</span>
+            <span className="ml-auto text-[10px] normal-case font-normal text-[var(--qzl-border)] italic">follows cursor</span>
           </div>
           <div className="overflow-hidden" style={{ height: 'calc(100% - 24px)' }}>
             <DetailedDiffPanel
@@ -1164,31 +1166,31 @@ function EditorPanel({
 
   return (
     <div
-      className={`flex flex-col overflow-hidden bg-[#181d24] min-h-0 transition-colors ${
-        isDragOver ? 'ring-2 ring-inset ring-[#58a6ff] bg-[#0d2137]' : ''
+      className={`flex flex-col overflow-hidden bg-[var(--qzl-background)] min-h-0 transition-colors ${
+        isDragOver ? 'ring-2 ring-inset ring-[var(--qzl-primary)] bg-[var(--qzl-primary-subtle)]' : ''
       }`}
       onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
       onDragLeave={() => setIsDragOver(false)}
       onDrop={handleDrop}
     >
       {/* Header */}
-      <div className="flex items-center gap-1 h-9 px-2 bg-[#1e242c] border-b border-[#4b5563] shrink-0">
-        <span className="text-xs font-bold text-[#cc3333] uppercase tracking-wider select-none whitespace-nowrap">
+      <div className="flex items-center gap-1 h-9 px-2 bg-[var(--qzl-surface)] border-b border-[var(--qzl-border)] shrink-0">
+        <span className="text-xs font-bold text-[var(--qzl-primary)] uppercase tracking-wider select-none whitespace-nowrap">
           {label}
         </span>
         <span
           className={`flex-1 min-w-0 mx-2 text-[13px] font-mono truncate ${
-            isUntitled ? 'text-[#6b7280] italic' : 'text-[#e5e7eb]'
+            isUntitled ? 'text-[var(--qzl-text-soft)] italic' : 'text-[var(--qzl-text)]'
           }`}
           title={displayPath}
         >
           {isUntitled ? displayPath : displayPath.split('/').pop()}
         </span>
         {hasContent && (
-          <span className="text-[11px] text-[#6b7280] tabular-nums select-none shrink-0 whitespace-nowrap">
+          <span className="text-[11px] text-[var(--qzl-text-soft)] tabular-nums select-none shrink-0 whitespace-nowrap">
             {totalLines} ln
             {changedLines > 0 && (
-              <span className="ml-1 text-[#e3b341]">{changedLines}△</span>
+              <span className="ml-1 text-[var(--qzl-warning)]">{changedLines}△</span>
             )}
           </span>
         )}
@@ -1196,8 +1198,8 @@ function EditorPanel({
           {fsApiSupported && (
             <button
               onClick={onLoad}
-              className="w-6 h-6 flex items-center justify-center rounded bg-[#252d37] border border-[#4b5563]/50
-                         text-[#9ca3af] hover:text-[#e5e7eb] hover:bg-[#374151] transition-colors text-xs"
+              className="w-6 h-6 flex items-center justify-center rounded bg-[var(--qzl-surface)] border border-[var(--qzl-border)]/50
+                         text-[var(--qzl-text-muted)] hover:text-[var(--qzl-text)] hover:bg-[var(--qzl-surface-muted)] transition-colors text-xs"
               title={`Load file into ${label}`}
             >
               📂
@@ -1206,8 +1208,8 @@ function EditorPanel({
           {fsApiSupported && hasContent && (
             <button
               onClick={onSave}
-              className="w-6 h-6 flex items-center justify-center rounded bg-[#252d37] border border-[#4b5563]/50
-                         text-[#9ca3af] hover:text-[#e5e7eb] hover:bg-[#374151] transition-colors text-xs"
+              className="w-6 h-6 flex items-center justify-center rounded bg-[var(--qzl-surface)] border border-[var(--qzl-border)]/50
+                         text-[var(--qzl-text-muted)] hover:text-[var(--qzl-text)] hover:bg-[var(--qzl-surface-muted)] transition-colors text-xs"
               title={`Save ${label} to file`}
             >
               💾
@@ -1216,8 +1218,8 @@ function EditorPanel({
           {hasContent && (
             <button
               onClick={() => onChange('')}
-              className="w-6 h-6 flex items-center justify-center rounded bg-[#252d37] border border-[#4b5563]/50
-                         text-[#9ca3af] hover:text-[#f85149] hover:bg-[#3a1e1e] hover:border-[#f85149] transition-colors text-xs"
+              className="w-6 h-6 flex items-center justify-center rounded bg-[var(--qzl-surface)] border border-[var(--qzl-border)]/50
+                         text-[var(--qzl-text-muted)] hover:text-[var(--qzl-danger)] hover:bg-[var(--qzl-danger-subtle)] hover:border-[var(--qzl-danger)] transition-colors text-xs"
               title={`Clear ${label}`}
             >
               ✕
@@ -1229,8 +1231,8 @@ function EditorPanel({
             aria-pressed={wordWrap}
             className={`w-6 h-6 flex items-center justify-center rounded border text-[10px] font-bold transition-colors ${
               wordWrap
-                ? 'bg-[#1f6feb] text-white border-[#58a6ff]'
-                : 'bg-[#252d37] text-[#6b7280] border-[#4b5563]/50 hover:text-[#e5e7eb] hover:bg-[#374151]'
+                ? 'bg-[var(--qzl-primary)] text-white border-[var(--qzl-primary)]'
+                : 'bg-[var(--qzl-surface)] text-[var(--qzl-text-soft)] border-[var(--qzl-border)]/50 hover:text-[var(--qzl-text)] hover:bg-[var(--qzl-surface-muted)]'
             }`}
           >
             ↵
@@ -1241,8 +1243,8 @@ function EditorPanel({
       {/* Editor area */}
       <div className="relative flex-1 overflow-hidden">
         {isDragOver && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#0d2137]/80 border-2 border-dashed border-[#58a6ff] pointer-events-none rounded">
-            <div className="text-center text-[#58a6ff]">
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-[var(--qzl-primary-subtle)]/80 border-2 border-dashed border-[var(--qzl-primary)] pointer-events-none rounded">
+            <div className="text-center text-[var(--qzl-primary)]">
               <div className="text-3xl mb-1">📂</div>
               <p className="text-sm font-semibold">Drop file to load</p>
             </div>
@@ -1251,7 +1253,7 @@ function EditorPanel({
 
         {/* Line numbers (clickable) */}
         <div
-          className="absolute left-0 top-0 bottom-0 overflow-hidden z-10 border-r border-[#4b5563]/60 cursor-pointer"
+          className="absolute left-0 top-0 bottom-0 overflow-hidden z-10 border-r border-[var(--qzl-border)]/60 cursor-pointer"
           style={{ width: LINE_NUM_W, pointerEvents: 'auto' }}
         >
           <div ref={lineNumRef} style={{ height: contentH, willChange: 'transform' }}>
@@ -1266,9 +1268,9 @@ function EditorPanel({
                   onClick={(e) => onLineClick(lineNum, e.shiftKey)}
                   className={`text-right select-none transition-colors ${
                     isSelected
-                      ? 'bg-[#1e3a5f] text-[#79c0ff]'
+                      ? 'bg-[var(--qzl-primary-subtle)] text-[var(--qzl-primary)]'
                       : `${lineNumBg(status)} ${lineNumColor(status)} hover:brightness-125`
-                  } ${isActive ? 'ring-1 ring-inset ring-[#79c0ff]/50' : ''}`}
+                  } ${isActive ? 'ring-1 ring-inset ring-[var(--qzl-primary)]/50' : ''}`}
                   style={{ height: LINE_HEIGHT, lineHeight: `${LINE_HEIGHT}px`, fontSize: 11, paddingRight: 6 }}
                   title={`Line ${lineNum}${status ? ` (${status})` : ''}`}
                   role="button"
@@ -1297,11 +1299,11 @@ function EditorPanel({
                   style={{
                     height: LINE_HEIGHT,
                     background: isFlashed
-                      ? 'rgba(86,211,100,0.26)'
+                      ? 'color-mix(in srgb, var(--qzl-success) 26%, transparent)'
                       : isSelected
-                        ? 'rgba(121,192,255,0.14)'
+                        ? 'color-mix(in srgb, var(--qzl-primary) 14%, transparent)'
                         : lineBg(status, side),
-                    outline: isActive ? '1px solid rgba(121,192,255,0.35)' : 'none',
+                    outline: isActive ? '1px solid color-mix(in srgb, var(--qzl-primary) 35%, transparent)' : 'none',
                     outlineOffset: '-1px',
                   }}
                 />
@@ -1321,8 +1323,8 @@ function EditorPanel({
           onSelect={e => updateCursorAndSelection(e.currentTarget)}
           aria-label={`${label} editor — paste or type text to compare`}
           aria-multiline="true"
-          className="absolute top-0 bottom-0 bg-transparent text-[#e5e7eb] resize-none outline-none
-                     focus:ring-0 selection:bg-[#cc3333]/25"
+          className="absolute top-0 bottom-0 bg-transparent text-[var(--qzl-text)] resize-none outline-none
+                     focus:ring-0 selection:bg-[var(--qzl-primary)]/25"
           style={{
             left: LINE_NUM_W,
             right: 0,
@@ -1332,7 +1334,7 @@ function EditorPanel({
             fontSize: 13,
             fontFamily: "'Consolas', 'Monaco', 'Courier New', monospace",
             padding: '0 10px',
-            caretColor: '#cc3333',
+            caretColor: 'var(--qzl-primary)',
             whiteSpace: wordWrap ? 'pre-wrap' : 'pre',
             overflowWrap: wordWrap ? 'break-word' : 'normal',
             tabSize: 4,
@@ -1348,12 +1350,12 @@ function EditorPanel({
         {/* Empty hint */}
         {!hasContent && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ left: LINE_NUM_W }}>
-            <div className="text-center text-[#4b5563] select-none">
+            <div className="text-center text-[var(--qzl-border)] select-none">
               <div className="text-2xl mb-2">{side === 'left' ? '📄' : '📋'}</div>
               <p className="text-xs font-medium mb-1">
                 {fsApiSupported ? 'Click 📂 to open a file' : 'Paste or type text here'}
               </p>
-              <p className="text-[10px] text-[#374151]">or drag &amp; drop a file</p>
+              <p className="text-[10px] text-[var(--qzl-surface-muted)]">or drag &amp; drop a file</p>
             </div>
           </div>
         )}
@@ -1405,23 +1407,23 @@ function StarterInputPanel({
 
   return (
     <div
-      className={`flex flex-col min-h-0 bg-[#181d24] ${isDragOver ? 'ring-2 ring-inset ring-[#58a6ff]' : ''}`}
+      className={`flex flex-col min-h-0 bg-[var(--qzl-background)] ${isDragOver ? 'ring-2 ring-inset ring-[var(--qzl-primary)]' : ''}`}
       onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
       onDragLeave={() => setIsDragOver(false)}
       onDrop={handleDrop}
     >
-      <div className="flex items-center gap-1 h-9 px-2 bg-[#1e242c] border-b border-[#4b5563] shrink-0">
-        <span className="text-xs font-bold text-[#cc3333] uppercase tracking-wider select-none whitespace-nowrap">
+      <div className="flex items-center gap-1 h-9 px-2 bg-[var(--qzl-surface)] border-b border-[var(--qzl-border)] shrink-0">
+        <span className="text-xs font-bold text-[var(--qzl-primary)] uppercase tracking-wider select-none whitespace-nowrap">
           {label}
         </span>
-        <span className="flex-1 min-w-0 mx-2 text-[13px] font-mono truncate text-[#e5e7eb]" title={path || placeholder}>
+        <span className="flex-1 min-w-0 mx-2 text-[13px] font-mono truncate text-[var(--qzl-text)]" title={path || placeholder}>
           {title}
         </span>
         <div className="flex gap-0.5 ml-1 shrink-0">
           {fsApiSupported && (
             <button
               onClick={onLoad}
-              className="w-6 h-6 flex items-center justify-center rounded bg-[#252d37] border border-[#4b5563]/50 text-[#9ca3af] hover:text-[#e5e7eb] hover:bg-[#374151] transition-colors text-xs"
+              className="w-6 h-6 flex items-center justify-center rounded bg-[var(--qzl-surface)] border border-[var(--qzl-border)]/50 text-[var(--qzl-text-muted)] hover:text-[var(--qzl-text)] hover:bg-[var(--qzl-surface-muted)] transition-colors text-xs"
               title={`Load file into ${label}`}
             >
               📂
@@ -1430,7 +1432,7 @@ function StarterInputPanel({
           {fsApiSupported && text && (
             <button
               onClick={onSave}
-              className="w-6 h-6 flex items-center justify-center rounded bg-[#252d37] border border-[#4b5563]/50 text-[#9ca3af] hover:text-[#e5e7eb] hover:bg-[#374151] transition-colors text-xs"
+              className="w-6 h-6 flex items-center justify-center rounded bg-[var(--qzl-surface)] border border-[var(--qzl-border)]/50 text-[var(--qzl-text-muted)] hover:text-[var(--qzl-text)] hover:bg-[var(--qzl-surface-muted)] transition-colors text-xs"
               title={`Save ${label} to file`}
             >
               💾
@@ -1439,7 +1441,7 @@ function StarterInputPanel({
           {!!text && (
             <button
               onClick={() => onChange('')}
-              className="w-6 h-6 flex items-center justify-center rounded bg-[#252d37] border border-[#4b5563]/50 text-[#9ca3af] hover:text-[#f85149] hover:bg-[#3a1e1e] hover:border-[#f85149] transition-colors text-xs"
+              className="w-6 h-6 flex items-center justify-center rounded bg-[var(--qzl-surface)] border border-[var(--qzl-border)]/50 text-[var(--qzl-text-muted)] hover:text-[var(--qzl-danger)] hover:bg-[var(--qzl-danger-subtle)] hover:border-[var(--qzl-danger)] transition-colors text-xs"
               title={`Clear ${label}`}
             >
               ✕
@@ -1451,8 +1453,8 @@ function StarterInputPanel({
             aria-pressed={wordWrap}
             className={`w-6 h-6 flex items-center justify-center rounded border text-[10px] font-bold transition-colors ${
               wordWrap
-                ? 'bg-[#1f6feb] text-white border-[#58a6ff]'
-                : 'bg-[#252d37] text-[#6b7280] border-[#4b5563]/50 hover:text-[#e5e7eb] hover:bg-[#374151]'
+                ? 'bg-[var(--qzl-primary)] text-white border-[var(--qzl-primary)]'
+                : 'bg-[var(--qzl-surface)] text-[var(--qzl-text-soft)] border-[var(--qzl-border)]/50 hover:text-[var(--qzl-text)] hover:bg-[var(--qzl-surface-muted)]'
             }`}
           >
             ↵
@@ -1461,8 +1463,8 @@ function StarterInputPanel({
       </div>
       <div className="relative flex-1 min-h-0">
         {isDragOver && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#0d2137]/80 border-2 border-dashed border-[#58a6ff] pointer-events-none rounded">
-            <div className="text-center text-[#58a6ff]">
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-[var(--qzl-primary-subtle)]/80 border-2 border-dashed border-[var(--qzl-primary)] pointer-events-none rounded">
+            <div className="text-center text-[var(--qzl-primary)]">
               <div className="text-3xl mb-1">📂</div>
               <p className="text-sm font-semibold">Drop file to load</p>
             </div>
@@ -1471,12 +1473,12 @@ function StarterInputPanel({
         <textarea
           value={text}
           onChange={e => onChange(e.target.value)}
-          className="absolute inset-0 bg-transparent text-[#e5e7eb] resize-none outline-none focus:ring-0 selection:bg-[#cc3333]/25 px-3 py-2"
+          className="absolute inset-0 bg-transparent text-[var(--qzl-text)] resize-none outline-none focus:ring-0 selection:bg-[var(--qzl-primary)]/25 px-3 py-2"
           style={{
             lineHeight: `${LINE_HEIGHT}px`,
             fontSize: 13,
             fontFamily: "'Consolas', 'Monaco', 'Courier New', monospace",
-            caretColor: '#cc3333',
+            caretColor: 'var(--qzl-primary)',
             whiteSpace: wordWrap ? 'pre-wrap' : 'pre',
             overflowWrap: wordWrap ? 'break-word' : 'normal',
             tabSize: 4,
@@ -1491,12 +1493,12 @@ function StarterInputPanel({
         />
         {!text && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="text-center text-[#4b5563] select-none">
+            <div className="text-center text-[var(--qzl-border)] select-none">
               <div className="text-2xl mb-2">{side === 'left' ? '📄' : '📋'}</div>
               <p className="text-xs font-medium mb-1">
                 {fsApiSupported ? 'Click 📂 to open a file' : 'Paste or type text here'}
               </p>
-              <p className="text-[10px] text-[#374151]">or drag &amp; drop a file</p>
+              <p className="text-[10px] text-[var(--qzl-surface-muted)]">or drag &amp; drop a file</p>
             </div>
           </div>
         )}

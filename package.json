@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@qzlcorp/react": "^0.2.1",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "diff": "^9.0.0",

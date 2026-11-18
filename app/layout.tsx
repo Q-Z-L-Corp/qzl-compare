@@ -4,6 +4,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import './globals.css';
 import FeedbackWidget from '@/components/FeedbackWidget';
 import Script from 'next/script';
+import '@qzlcorp/react/styles.css';
 
 const BASE_URL = 'https://compare.qz-l.com';
 
@@ -112,7 +113,7 @@ const websiteLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="h-full">
+    <html lang="en" className="h-full" data-qzl-theme="dark">
       <head>
         <script
           type="application/ld+json"
@@ -127,7 +128,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {`(function(s){s.dataset.zone='12172421',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`}
         </Script>
       </head>
-      <body className="h-full bg-[#12161c] text-[#e5e7eb] antialiased selection:bg-[#cc3333] selection:text-white overflow-hidden">
+      <body className="h-full antialiased selection:bg-[#66a8ff] selection:text-[#07121d] overflow-hidden">
         {children}
         <FeedbackWidget />
         <Analytics />

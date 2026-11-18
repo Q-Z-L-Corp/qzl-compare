@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import MenuBar, { type MenuDefinition } from '@/components/MenuBar';
+import { Badge, Button, Card, Input } from '@qzlcorp/react';
 
 type SessionType = {
   id: string;
@@ -22,7 +22,7 @@ const SESSION_TYPES: SessionType[] = [
     icon: '📁',
     description: 'Compare the contents of two folders side by side. Identifies files that are different, added, or removed between directories.',
     href: '/folders',
-    color: '#cc3333',
+    color: 'var(--qzl-primary)',
     keywords: ['folder', 'directory', 'dir', 'tree'],
   },
   {
@@ -31,7 +31,7 @@ const SESSION_TYPES: SessionType[] = [
     icon: '📄',
     description: 'Compare two individual files with line-by-line diff highlighting, inline character-level changes, and file sync capabilities.',
     href: '/files',
-    color: '#3b82f6',
+    color: 'var(--qzl-primary)',
     keywords: ['file', 'diff', 'merge', 'sync'],
   },
   {
@@ -40,25 +40,25 @@ const SESSION_TYPES: SessionType[] = [
     icon: '📝',
     description: 'Paste or type text directly into two editors and see differences highlighted in real-time. No file system access required.',
     href: '/text',
-    color: '#2ea043',
+    color: 'var(--qzl-success)',
     keywords: ['text', 'paste', 'clipboard', 'string'],
   },
 ];
 
 export default function HomePage() {
   const router = useRouter();
-  const [selected, setSelected] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showAbout, setShowAbout] = useState(false);
-  const selectedSession = SESSION_TYPES.find(s => s.id === selected);
 
   // ── Recent sessions (localStorage) ────────────────────────────────────────
   const [recentIds, setRecentIds] = useState<string[]>([]);
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('qzl-recent-sessions');
-      if (stored) setRecentIds(JSON.parse(stored));
-    } catch { /* ignore */ }
+    const timer = window.setTimeout(() => {
+      try {
+        const stored = localStorage.getItem('qzl-recent-sessions');
+        if (stored) setRecentIds(JSON.parse(stored));
+      } catch { /* ignore */ }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const recordRecent = useCallback((id: string) => {
@@ -85,296 +85,114 @@ export default function HomePage() {
     );
   }, [searchQuery]);
 
-  // ── Menu definitions
-  const menus: MenuDefinition[] = useMemo(() => [
-    {
-      label: 'Session',
-      items: [
-        { label: 'New File Compare', action: () => router.push('/files') },
-        { label: 'New Folder Compare', action: () => router.push('/folders') },
-        { label: 'New Text Compare', action: () => router.push('/text') },
-        { separator: true },
-        { label: 'Close Tab', action: () => window.close() },
-      ],
-    },
-    {
-      label: 'View',
-      items: [
-        { label: 'Folder Compare', action: () => setSelected("folders") },
-        { label: 'File Compare', action: () => setSelected("files") },
-        { label: 'Text Compare', action: () => setSelected("text") },
-        { separator: true },
-        { label: 'Clear Selection', action: () => setSelected(null), disabled: !selected },
-      ],
-    },
-    {
-      label: 'Help',
-      items: [
-        { label: 'About QZL Compare', action: () => setShowAbout(true) },
-      ],
-    },
-  ], [selected, router]);
-
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      {/* Title bar */}
-      <header className="flex items-center h-10 px-4 bg-[#12161c] border-b border-[#4b5563] shrink-0">
-        <div className="flex items-center gap-2 text-[#cc3333] font-bold text-sm select-none">
-          <span className="text-lg">⚖️</span>
-          <span className="tracking-tight">Home - QZL Compare</span>
-        </div>
-      </header>
-
-      {/* Menu bar */}
-      <MenuBar menus={menus} />
-
-      {/* Main content: sidebar + main area */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* ── Left sidebar: Sessions panel ── */}
-        <aside className="w-64 bg-[#1e242c] border-r border-[#4b5563] flex flex-col shrink-0 overflow-hidden">
-          {/* Sidebar header */}
-          <div className="flex items-center h-9 px-3 bg-[#252d37] border-b border-[#4b5563] text-xs font-bold text-[#cc3333] uppercase tracking-wider select-none shrink-0">
-            Sessions
-          </div>
-
-          {/* Session tree */}
-          <div className="flex-1 overflow-y-auto p-2">
-            {/* New section */}
-            <div className="mb-3">
-              <div className="flex items-center gap-1.5 px-2 py-1 text-xs font-semibold text-[#e5e7eb] select-none">
-                <span className="text-[10px] text-[#6b7280]">▾</span>
-                <span className="text-[#cc3333]">📂</span>
-                New
-              </div>
-              <div className="ml-3 border-l border-[#4b5563]/30">
-                {filteredSessions.map(session => (
-                  <button
-                    key={session.id}
-                    onClick={() => setSelected(session.id)}
-                    onDoubleClick={() => { recordRecent(session.id); router.push(session.href); }}
-                    className={`flex items-center gap-2 w-full px-3 py-1.5 text-[13px] text-left rounded-r-md transition-colors ${
-                      selected === session.id
-                        ? 'bg-[#cc3333]/15 text-[#cc3333] border-l-2 border-[#cc3333] -ml-px'
-                        : 'text-[#9ca3af] hover:bg-[#2f3842] hover:text-[#e5e7eb]'
-                    }`}
-                  >
-                    <span>{session.icon}</span>
-                    <span className="truncate">{session.name}</span>
-                  </button>
-                ))}
-                {filteredSessions.length === 0 && (
-                  <div className="px-3 py-2 text-xs text-[#6b7280]">No matches for &ldquo;{searchQuery}&rdquo;</div>
-                )}
-              </div>
-            </div>
-
-            {/* Recent section */}
-            <div className="mb-3">
-              <div className="flex items-center gap-1.5 px-2 py-1 text-xs font-semibold text-[#e5e7eb] select-none">
-                <span className="text-[10px] text-[#6b7280]">{recentSessions.length > 0 ? '▾' : '▸'}</span>
-                <span className="text-[#6b7280]">🕒</span>
-                <span className="text-[#6b7280]">Recent</span>
-              </div>
-              {recentSessions.length > 0 && (
-                <div className="ml-3 border-l border-[#4b5563]/30">
-                  {recentSessions.map(session => (
-                    <Link
-                      key={session.id}
-                      href={session.href}
-                      className="flex items-center gap-2 w-full px-3 py-1.5 text-[13px] text-left rounded-r-md transition-colors text-[#9ca3af] hover:bg-[#2f3842] hover:text-[#e5e7eb]"
-                    >
-                      <span>{session.icon}</span>
-                      <span className="truncate">{session.name}</span>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Sidebar footer: search */}
-          <div className="border-t border-[#4b5563] px-3 py-2 shrink-0">
-            <div className="flex items-center gap-2 px-2 py-1.5 bg-[#12161c] rounded border border-[#4b5563]/50 text-xs">
-              <span className="text-[#6b7280]">🔍</span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search sessions…"
-                className="flex-1 bg-transparent text-[#e5e7eb] outline-none placeholder:text-[#6b7280]"
-              />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="text-[#6b7280] hover:text-[#e5e7eb]">✕</button>
-              )}
-            </div>
-          </div>
-        </aside>
-
-        {/* ── Main content area ── */}
-        <main className="flex-1 bg-[#181d24] flex flex-col overflow-hidden">
-          {selectedSession ? (
-            /* Session detail view */
-            <div className="flex-1 flex flex-col items-center justify-center p-10">
-              <div className="w-full max-w-lg bg-[#252d37] rounded-xl border border-[#4b5563] overflow-hidden shadow-2xl">
-                {/* Session header */}
-                <div className="flex items-center gap-3 px-6 py-4 bg-[#1e242c] border-b border-[#4b5563]">
-                  <span className="text-3xl">{selectedSession.icon}</span>
-                  <div>
-                    <h2 className="text-lg font-bold text-[#e5e7eb]">{selectedSession.name}</h2>
-                    <p className="text-xs text-[#6b7280]">New session</p>
-                  </div>
-                </div>
-
-                {/* Session details */}
-                <div className="p-6">
-                  <p className="text-sm text-[#9ca3af] leading-relaxed mb-6">
-                    {selectedSession.description}
-                  </p>
-
-                  <div className="flex gap-3">
-                    <Link
-                      href={selectedSession.href}
-                      onClick={() => recordRecent(selectedSession.id)}
-                      className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg font-bold text-sm text-white transition-all shadow-lg hover:shadow-xl"
-                      style={{ background: `linear-gradient(135deg, ${selectedSession.color}, ${selectedSession.color}dd)` }}
-                    >
-                      Open {selectedSession.name}
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* Session cards grid (no selection) */
-            <div className="flex-1 flex flex-col items-center justify-center p-10">
-              <div className="text-center mb-10">
-                <div className="text-5xl mb-4 select-none" aria-hidden="true">⚖️</div>
-                <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-[#cc3333] to-[#3b82f6] bg-clip-text text-transparent">
-                  QZL Compare
-                </h1>
-                <p className="text-sm text-[#9ca3af] max-w-md">
-                  Free online tool to <strong className="text-[#e5e7eb] font-medium">compare files</strong>,{' '}
-                  <strong className="text-[#e5e7eb] font-medium">compare folders</strong>, and run a{' '}
-                  <strong className="text-[#e5e7eb] font-medium">text diff</strong> — instantly in your browser, no install needed.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-3 gap-6 max-w-2xl w-full">
-                {SESSION_TYPES.map(session => (
-                  <Link
-                    key={session.id}
-                    href={session.href}
-                    className="group flex flex-col items-center gap-3 p-6 rounded-xl bg-[#252d37] border border-[#4b5563]/50 hover:border-[#cc3333]/50 hover:bg-[#2f3842] transition-all hover:shadow-lg hover:shadow-[#cc3333]/5 cursor-pointer"
-                    aria-label={`Open ${session.name}`}
-                    onClick={() => recordRecent(session.id)}
-                  >
-                    <div className="text-5xl group-hover:scale-110 transition-transform" aria-hidden="true">{session.icon}</div>
-                    <span className="text-sm font-semibold text-[#e5e7eb] text-center">{session.name}</span>
-                    <span className="text-[11px] text-[#6b7280] text-center leading-snug">{session.description.split('.')[0]}</span>
-                  </Link>
-                ))}
-              </div>
-
-              {/* Feature highlights (visible for users + SEO) */}
-              <section className="mt-8 max-w-2xl w-full" aria-labelledby="features-heading">
-                <h2 id="features-heading" className="text-xs font-bold text-[#4b5563] uppercase tracking-widest text-center mb-3">
-                  Why QZL Compare?
-                </h2>
-                <ul className="grid grid-cols-2 gap-3 text-xs text-[#6b7280]">
-                  <li className="flex items-start gap-2 p-2.5 bg-[#1e242c] rounded-lg border border-[#2d333b]">
-                    <span aria-hidden="true" className="text-base shrink-0">🔒</span>
-                    <span><strong className="text-[#9ca3af]">100% private</strong> — all processing happens locally in your browser, files are never uploaded</span>
-                  </li>
-                  <li className="flex items-start gap-2 p-2.5 bg-[#1e242c] rounded-lg border border-[#2d333b]">
-                    <span aria-hidden="true" className="text-base shrink-0">⚡</span>
-                    <span><strong className="text-[#9ca3af]">Instant file difference checker</strong> — line-level diffs with character-level highlights</span>
-                  </li>
-                  <li className="flex items-start gap-2 p-2.5 bg-[#1e242c] rounded-lg border border-[#2d333b]">
-                    <span aria-hidden="true" className="text-base shrink-0">📁</span>
-                    <span><strong className="text-[#9ca3af]">Compare folders online</strong> — detect added, removed, and modified files across entire directories</span>
-                  </li>
-                  <li className="flex items-start gap-2 p-2.5 bg-[#1e242c] rounded-lg border border-[#2d333b]">
-                    <span aria-hidden="true" className="text-base shrink-0">📝</span>
-                    <span><strong className="text-[#9ca3af]">Text diff tool</strong> — paste text directly to see real-time differences, no file needed</span>
-                  </li>
-                  <li className="flex items-start gap-2 p-2.5 bg-[#1e242c] rounded-lg border border-[#2d333b]">
-                    <span aria-hidden="true" className="text-base shrink-0">⇔</span>
-                    <span><strong className="text-[#9ca3af]">Side-by-side &amp; unified views</strong> — switch between layouts with one click</span>
-                  </li>
-                  <li className="flex items-start gap-2 p-2.5 bg-[#1e242c] rounded-lg border border-[#2d333b]">
-                    <span aria-hidden="true" className="text-base shrink-0">⬇</span>
-                    <span><strong className="text-[#9ca3af]">Export as patch file</strong> — download a standard <code className="text-[#cc3333]">.patch</code> / unified diff for version control</span>
-                  </li>
-                </ul>
-                <p className="mt-3 text-[11px] text-[#4b5563] text-center">
-                  💡 Use Chrome, Edge, or Chromium for full File System Access API features
-                </p>
-              </section>
-
-              {/* Hidden rich SEO copy — visible to crawlers, styled to not dominate UI */}
-              <section className="sr-only" aria-label="About QZL Compare">
-                <h2>Free Online File &amp; Folder Comparison Tool — QZL Compare</h2>
-                <p>
-                  QZL Compare is a free, browser-based alternative to Beyond Compare. Use it to
-                  <strong> compare files online</strong>, <strong>compare folders online</strong>,
-                  run a <strong>text diff tool</strong>, or check a
-                  <strong> file difference</strong> — all without installing anything or uploading
-                  your data. Every comparison runs locally in your browser.
-                </p>
-                <h3>Key Features</h3>
-                <ul>
-                  <li>Side-by-side file diff with character-level inline highlighting</li>
-                  <li>Recursive folder comparison — find added, removed, and modified files</li>
-                  <li>Real-time text diff — paste any two strings and see differences instantly</li>
-                  <li>Unified diff view compatible with standard patch format</li>
-                  <li>Export diff as a <code>.patch</code> file for version control workflows</li>
-                  <li>Ignore whitespace, case sensitivity, and CRLF/LF line endings</li>
-                  <li>100% private — no server uploads, no account required, no tracking</li>
-                  <li>Works on Windows, macOS, and Linux in Chrome, Edge, and Opera</li>
-                </ul>
-                <h3>Use Cases</h3>
-                <ul>
-                  <li>Developers reviewing code changes without a desktop diff tool</li>
-                  <li>DevOps engineers comparing configuration files across environments</li>
-                  <li>Technical writers spotting changes between document versions</li>
-                  <li>Students comparing submitted code against reference solutions</li>
-                </ul>
-              </section>
-            </div>
-          )}
-        </main>
+    <div className="relative h-screen overflow-hidden bg-[var(--qzl-background)]">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -left-32 top-[-240px] h-[520px] w-[520px] rounded-full bg-[color-mix(in_srgb,var(--qzl-primary)_10%,transparent)] blur-3xl" />
+        <div className="absolute right-[-180px] bottom-[-260px] h-[600px] w-[600px] rounded-full bg-[color-mix(in_srgb,var(--qzl-accent)_8%,transparent)] blur-3xl" />
       </div>
 
-      {/* Status bar */}
-      <footer className="flex justify-between items-center h-8 px-4 bg-[#12161c] border-t border-[#4b5563] text-xs text-[#9ca3af] shrink-0">
-        <span className="flex items-center gap-2">
-          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#3b82f6] text-white text-[9px] font-bold">i</span>
-          <span>Ready</span>
-        </span>
-        <span className="text-[#6b7280]">QZL Compare v0.1.0</span>
-      </footer>
+      <header className="relative z-10 flex h-16 items-center justify-between border-b border-[var(--qzl-border)] px-5 sm:px-8">
+        <Link href="/" className="flex items-center gap-3 no-underline" aria-label="QZL Compare home">
+          <div className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--qzl-primary-border)] bg-[var(--qzl-primary-subtle)] text-[var(--qzl-primary)]">
+            <span className="text-lg font-black">Q</span>
+          </div>
+          <div>
+            <div className="text-sm font-bold tracking-tight text-[var(--qzl-text)]">QZL Compare</div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--qzl-text-muted)]">Diff workspace</div>
+          </div>
+        </Link>
+        <Badge variant="success">Private by design</Badge>
+      </header>
 
-      {/* About dialog */}
-      {showAbout && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60" onClick={() => setShowAbout(false)}>
-          <div className="bg-[#252d37] border border-[#4b5563] rounded-xl shadow-2xl p-6 max-w-sm text-center" onClick={e => e.stopPropagation()}>
-            <div className="text-5xl mb-3">⚖️</div>
-            <h2 className="text-xl font-bold text-[#e5e7eb] mb-1">QZL Compare</h2>
-            <p className="text-sm text-[#9ca3af] mb-3">Version 0.1.0 — Free &amp; Open</p>
-            <p className="text-xs text-[#6b7280] mb-4 leading-relaxed">
-              Browser-based file, folder &amp; text comparison tool.<br/>
-              All processing happens locally — <strong className="text-[#9ca3af]">files are never uploaded</strong>.<br/>
-              No install, no account required.
-            </p>
-            <button
-              onClick={() => setShowAbout(false)}
-              className="px-6 py-2 bg-[#cc3333] hover:bg-[#a12828] text-white rounded-lg text-sm font-semibold transition-colors"
-            >
-              Close
-            </button>
+      <main className="relative z-10 mx-auto flex h-[calc(100%-64px)] max-w-[1180px] flex-col px-5 py-8 sm:px-8 sm:py-10">
+        <div className="mb-7 flex items-end justify-between gap-6">
+          <div>
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-[var(--qzl-primary)]">Comparison tools</p>
+            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">What would you like to compare?</h1>
+          </div>
+          <div className="hidden w-72 md:block">
+            <Input
+              type="search"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search tools"
+              aria-label="Search comparison tools"
+              className="!min-h-10 !h-10 !rounded-xl"
+            />
           </div>
         </div>
-      )}
+
+        {recentSessions.length > 0 && (
+          <div className="mb-5 flex items-center gap-2 overflow-hidden">
+            <span className="shrink-0 text-xs font-semibold text-[var(--qzl-text-muted)]">Recent</span>
+            {recentSessions.map(session => (
+              <Link
+                key={session.id}
+                href={session.href}
+                onClick={() => recordRecent(session.id)}
+                className="shrink-0 rounded-full border border-[var(--qzl-border)] bg-[var(--qzl-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--qzl-text-muted)] no-underline transition hover:border-[var(--qzl-primary-border)] hover:text-[var(--qzl-text)]"
+              >
+                {session.name}
+              </Link>
+            ))}
+          </div>
+        )}
+
+        <div className="grid gap-4 md:grid-cols-3">
+          {filteredSessions.map((session, index) => (
+            <Link
+              key={session.id}
+              href={session.href}
+              onClick={() => recordRecent(session.id)}
+              className="group no-underline"
+              aria-label={`Open ${session.name}`}
+            >
+              <Card elevated className="home-tool-card h-full p-5 sm:p-6">
+                <div className="mb-8 flex items-start justify-between">
+                  <div className="grid h-12 w-12 place-items-center rounded-2xl border border-[var(--qzl-primary-border)] bg-[var(--qzl-primary-subtle)] text-xl">
+                    {index === 0 ? '▥' : index === 1 ? '≡' : 'T'}
+                  </div>
+                  <span className="text-xs font-bold text-[var(--qzl-text-soft)]">0{index + 1}</span>
+                </div>
+                <h2 className="mb-2 text-xl font-bold text-[var(--qzl-text)]">{session.name}</h2>
+                <p className="min-h-[72px] text-sm leading-6 text-[var(--qzl-text-muted)]">{session.description}</p>
+                <div className="mt-5 flex items-center justify-between border-t border-[var(--qzl-border)] pt-4">
+                  <span className="text-xs font-bold text-[var(--qzl-primary)]">Open workspace</span>
+                  <span className="grid h-8 w-8 place-items-center rounded-full border border-[var(--qzl-border)] text-sm transition group-hover:border-[var(--qzl-primary)] group-hover:bg-[var(--qzl-primary)] group-hover:text-[var(--qzl-primary-foreground)]">→</span>
+                </div>
+              </Card>
+            </Link>
+          ))}
+          {filteredSessions.length === 0 && (
+            <Card className="col-span-full p-8 text-center text-sm text-[var(--qzl-text-muted)]">
+              No comparison tools match “{searchQuery}”.
+            </Card>
+          )}
+        </div>
+
+        <div className="mt-auto pt-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--qzl-border)] pt-5">
+            <div className="flex items-center gap-5 text-xs text-[var(--qzl-text-muted)]">
+              <span><strong className="text-[var(--qzl-success)]">●</strong> 100% local</span>
+              <span>No account required</span>
+              <span>No uploads</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push('/text')}
+              className="!h-9"
+            >
+              Quick text compare →
+            </Button>
+          </div>
+        </div>
+
+        <section className="sr-only" aria-label="About QZL Compare">
+          <h2>Free online file, folder and text comparison</h2>
+        </section>
+      </main>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { Button, Input, Textarea } from '@qzlcorp/react';
 
 interface FeedbackModalProps {
   onClose: () => void;
@@ -55,21 +56,21 @@ export default function FeedbackModal({ onClose }: FeedbackModalProps) {
       onClick={onClose}
     >
       <div
-        className="bg-[#252d37] border border-[#4b5563] rounded-xl shadow-2xl w-full max-w-lg mx-4"
+        className="bg-[var(--qzl-surface)] border border-[var(--qzl-border)] rounded-xl shadow-2xl w-full max-w-lg mx-4"
         onClick={e => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label="Send Feedback"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#4b5563]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--qzl-border)]">
           <div className="flex items-center gap-2">
             <span className="text-lg">💬</span>
-            <h2 className="text-[15px] font-semibold text-[#e5e7eb]">Send Feedback / Report Issue</h2>
+            <h2 className="text-[15px] font-semibold text-[var(--qzl-text)]">Send Feedback / Report Issue</h2>
           </div>
           <button
             onClick={onClose}
-            className="text-[#6b7280] hover:text-[#e5e7eb] transition-colors text-lg leading-none"
+            className="text-[var(--qzl-text-soft)] hover:text-[var(--qzl-text)] transition-colors text-lg leading-none"
             aria-label="Close"
           >
             ✕
@@ -80,8 +81,8 @@ export default function FeedbackModal({ onClose }: FeedbackModalProps) {
           /* Success state */
           <div className="px-5 py-8 text-center">
             <div className="text-4xl mb-3">✅</div>
-            <h3 className="text-[15px] font-semibold text-[#e5e7eb] mb-2">Thank you for your feedback!</h3>
-            <p className="text-sm text-[#9ca3af] mb-4">
+            <h3 className="text-[15px] font-semibold text-[var(--qzl-text)] mb-2">Thank you for your feedback!</h3>
+            <p className="text-sm text-[var(--qzl-text-muted)] mb-4">
               Your report has been submitted. Our team will review it shortly.
             </p>
             {issueUrl && (
@@ -89,31 +90,32 @@ export default function FeedbackModal({ onClose }: FeedbackModalProps) {
                 href={issueUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-block text-xs text-[#3b82f6] hover:underline mb-4 break-all"
+                className="inline-block text-xs text-[var(--qzl-primary)] hover:underline mb-4 break-all"
               >
                 View your issue on GitHub →
               </a>
             )}
             <br />
-            <button
+            <Button
               onClick={onClose}
-              className="px-6 py-2 bg-[#cc3333] hover:bg-[#a12828] text-white rounded-lg text-sm font-semibold transition-colors"
+              variant="primary"
+              size="sm"
             >
               Close
-            </button>
+            </Button>
           </div>
         ) : (
           /* Form */
           <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
-            <p className="text-xs text-[#6b7280]">
+            <p className="text-xs text-[var(--qzl-text-soft)]">
               Found a bug or have a suggestion? We&apos;d love to hear from you. Your feedback will be filed as a GitHub issue.
             </p>
 
             <div>
-              <label className="block text-xs font-medium text-[#9ca3af] mb-1">
-                Title <span className="text-[#cc3333]">*</span>
+              <label className="block text-xs font-medium text-[var(--qzl-text-muted)] mb-1">
+                Title <span className="text-[var(--qzl-primary)]">*</span>
               </label>
-              <input
+              <Input
                 type="text"
                 value={title}
                 onChange={e => setTitle(e.target.value)}
@@ -121,15 +123,15 @@ export default function FeedbackModal({ onClose }: FeedbackModalProps) {
                 maxLength={200}
                 required
                 disabled={submitState === 'submitting'}
-                className="w-full bg-[#1e242c] border border-[#4b5563] rounded-lg px-3 py-2 text-sm text-[#e5e7eb] placeholder-[#4b5563] focus:outline-none focus:border-[#3b82f6] disabled:opacity-50"
+                className="!min-h-11 !rounded-xl"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-[#9ca3af] mb-1">
-                Details <span className="text-[#cc3333]">*</span>
+              <label className="block text-xs font-medium text-[var(--qzl-text-muted)] mb-1">
+                Details <span className="text-[var(--qzl-primary)]">*</span>
               </label>
-              <textarea
+              <Textarea
                 value={description}
                 onChange={e => setDescription(e.target.value)}
                 placeholder="Describe the issue or idea in detail. Steps to reproduce, expected vs actual behavior, etc."
@@ -137,48 +139,50 @@ export default function FeedbackModal({ onClose }: FeedbackModalProps) {
                 maxLength={4000}
                 required
                 disabled={submitState === 'submitting'}
-                className="w-full bg-[#1e242c] border border-[#4b5563] rounded-lg px-3 py-2 text-sm text-[#e5e7eb] placeholder-[#4b5563] focus:outline-none focus:border-[#3b82f6] resize-none disabled:opacity-50"
+                className="!min-h-32 !rounded-xl !resize-y"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-[#9ca3af] mb-1">
-                Email <span className="text-[#6b7280]">(optional — for follow-up)</span>
+              <label className="block text-xs font-medium text-[var(--qzl-text-muted)] mb-1">
+                Email <span className="text-[var(--qzl-text-soft)]">(optional — for follow-up)</span>
               </label>
-              <input
+              <Input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 disabled={submitState === 'submitting'}
-                className="w-full bg-[#1e242c] border border-[#4b5563] rounded-lg px-3 py-2 text-sm text-[#e5e7eb] placeholder-[#4b5563] focus:outline-none focus:border-[#3b82f6] disabled:opacity-50"
+                className="!min-h-11 !rounded-xl"
               />
             </div>
 
             {submitState === 'error' && (
-              <p className="text-xs text-[#f87171] bg-[#f87171]/10 border border-[#f87171]/20 rounded-lg px-3 py-2">
+              <p className="text-xs text-[var(--qzl-danger)] bg-[var(--qzl-danger)]/10 border border-[var(--qzl-danger)]/20 rounded-lg px-3 py-2">
                 {errorMessage}
               </p>
             )}
 
             {/* Footer */}
             <div className="flex items-center justify-between pt-1">
-              <p className="text-[11px] text-[#4b5563]">
+              <p className="text-[11px] text-[var(--qzl-border)]">
                 Submitted anonymously as a GitHub issue.
               </p>
               <div className="flex gap-2">
-                <button
+                <Button
                   type="button"
                   onClick={onClose}
                   disabled={submitState === 'submitting'}
-                  className="px-4 py-2 text-sm text-[#9ca3af] hover:text-[#e5e7eb] transition-colors disabled:opacity-50"
+                  variant="ghost"
+                  size="sm"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
                   disabled={submitState === 'submitting' || !title.trim() || !description.trim()}
-                  className="px-5 py-2 bg-[#cc3333] hover:bg-[#a12828] text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+                  variant="primary"
+                  size="sm"
                 >
                   {submitState === 'submitting' ? (
                     <>
@@ -186,7 +190,7 @@ export default function FeedbackModal({ onClose }: FeedbackModalProps) {
                       Submitting…
                     </>
                   ) : 'Submit'}
-                </button>
+                </Button>
               </div>
             </div>
           </form>

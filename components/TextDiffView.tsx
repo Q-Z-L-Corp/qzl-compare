@@ -114,20 +114,20 @@ export default function TextDiffView({
           key={`${idx}`} 
           className={`border-b border-[rgba(69,71,90,0.1)] cursor-pointer
           ${isSelected ? 'ring-2 ring-blue-500 ring-inset' : ''}
-          ${status === 'equal' ? 'hover:bg-[rgba(255,255,255,0.02)]' : ''}
-          ${status === 'delete' ? 'bg-[rgba(248,81,73,0.08)] hover:bg-[rgba(248,81,73,0.12)]' : ''}
-          ${status === 'insert' ? 'bg-[rgba(86,211,100,0.08)] hover:bg-[rgba(86,211,100,0.12)]' : ''}
-          ${status === 'replace' ? 'bg-[rgba(227,179,65,0.08)] hover:bg-[rgba(227,179,65,0.12)]' : ''}
+          ${status === 'equal' ? 'folder-row--same' : ''}
+          ${status === 'delete' ? 'folder-row--different' : ''}
+          ${status === 'insert' ? 'folder-row--right-only' : ''}
+          ${status === 'replace' ? 'folder-row--left-only' : ''}
         `}
           onClick={() => handleLineClick(idx)}
         >
           {/* Left side */}
-          <td className="py-0 px-0 w-12 text-center text-xs font-mono text-[#6b7280] bg-[#181d24] border-r border-[#4b5563] select-none">
+          <td className="py-0 px-0 w-12 text-center text-xs font-mono text-[var(--qzl-text-soft)] bg-[var(--qzl-background)] border-r border-[var(--qzl-border)] select-none">
             {status !== 'insert' ? idx + 1 : ''}
           </td>
           <td className={`py-1 px-3 font-mono text-[13px] leading-6 min-h-[26px]
-            ${status === 'delete' ? 'bg-[#2a1515]' : ''}
-            ${status === 'replace' ? 'bg-[#2b1d0a]' : ''}
+            ${status === 'delete' ? 'bg-[var(--qzl-danger-subtle)]' : ''}
+            ${status === 'replace' ? 'bg-[var(--qzl-warning-subtle)]' : ''}
           `}>
             {editMode && status !== 'insert' ? (
               <input
@@ -136,15 +136,15 @@ export default function TextDiffView({
                 onChange={(e) => handleLineEdit('left', idx, e.target.value)}
                 className="w-full bg-transparent border-none outline-none text-inherit font-mono text-[13px] leading-6"
                 style={{
-                  color: status === 'delete' ? '#f85149' : status === 'replace' ? '#e3b341' : '#e5e7eb'
+                  color: status === 'delete' ? 'var(--qzl-danger)' : status === 'replace' ? 'var(--qzl-warning)' : 'var(--qzl-text)'
                 }}
               />
             ) : (
               <code
                 className={`block break-words text-left
-                  ${status === 'delete' ? 'text-[#f85149]' : ''}
-                  ${status === 'replace' ? 'text-[#e3b341]' : ''}
-                  ${status === 'equal' ? 'text-[#e5e7eb]' : ''}
+                  ${status === 'delete' ? 'text-[var(--qzl-danger)]' : ''}
+                  ${status === 'replace' ? 'text-[var(--qzl-warning)]' : ''}
+                  ${status === 'equal' ? 'text-[var(--qzl-text)]' : ''}
                 `}
               >
                 {leftLines[idx] || ' '}
@@ -153,14 +153,14 @@ export default function TextDiffView({
           </td>
           
           {/* Gutter */}
-          <td className="py-1 px-2 w-16 text-center bg-[#12161c] border-x border-[#4b5563]/30">
+          <td className="py-1 px-2 w-16 text-center bg-[var(--qzl-background-strong)] border-x border-[var(--qzl-border)]/30">
             {status === 'delete' && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   handleCopyToRight(idx);
                 }}
-                className="px-2 py-1 text-xs font-bold text-[#56d364] hover:bg-[#1a3a1a] rounded transition-colors"
+                className="px-2 py-1 text-xs font-bold text-[var(--qzl-success)] hover:bg-[var(--qzl-success-subtle)] rounded transition-colors"
                 title="Copy to right"
               >
                 →
@@ -172,7 +172,7 @@ export default function TextDiffView({
                   e.stopPropagation();
                   handleCopyToLeft(idx);
                 }}
-                className="px-2 py-1 text-xs font-bold text-[#56d364] hover:bg-[#1a3a1a] rounded transition-colors"
+                className="px-2 py-1 text-xs font-bold text-[var(--qzl-success)] hover:bg-[var(--qzl-success-subtle)] rounded transition-colors"
                 title="Copy to left"
               >
                 ←
@@ -185,7 +185,7 @@ export default function TextDiffView({
                     e.stopPropagation();
                     handleCopyToRight(idx);
                   }}
-                  className="px-1.5 py-1 text-xs font-bold text-[#79c0ff] hover:bg-[#1a2a3a] rounded transition-colors"
+                  className="px-1.5 py-1 text-xs font-bold text-[var(--qzl-primary)] hover:bg-[var(--qzl-primary-subtle)] rounded transition-colors"
                   title="Copy left to right"
                 >
                   →
@@ -195,7 +195,7 @@ export default function TextDiffView({
                     e.stopPropagation();
                     handleCopyToLeft(idx);
                   }}
-                  className="px-1.5 py-1 text-xs font-bold text-[#79c0ff] hover:bg-[#1a2a3a] rounded transition-colors"
+                  className="px-1.5 py-1 text-xs font-bold text-[var(--qzl-primary)] hover:bg-[var(--qzl-primary-subtle)] rounded transition-colors"
                   title="Copy right to left"
                 >
                   ←
@@ -205,12 +205,12 @@ export default function TextDiffView({
           </td>
 
           {/* Right side */}
-          <td className="py-0 px-0 w-12 text-center text-xs font-mono text-[#6b7280] bg-[#181d24] border-r border-[#4b5563] select-none">
+          <td className="py-0 px-0 w-12 text-center text-xs font-mono text-[var(--qzl-text-soft)] bg-[var(--qzl-background)] border-r border-[var(--qzl-border)] select-none">
             {status !== 'delete' ? idx + 1 : ''}
           </td>
           <td className={`py-1 px-3 font-mono text-[13px] leading-6 min-h-[26px]
-            ${status === 'insert' ? 'bg-[#152220]' : ''}
-            ${status === 'replace' ? 'bg-[#132608]' : ''}
+            ${status === 'insert' ? 'bg-[var(--qzl-success-subtle)]' : ''}
+            ${status === 'replace' ? 'bg-[var(--qzl-success-subtle)]' : ''}
           `}>
             {editMode && status !== 'delete' ? (
               <input
@@ -219,15 +219,15 @@ export default function TextDiffView({
                 onChange={(e) => handleLineEdit('right', idx, e.target.value)}
                 className="w-full bg-transparent border-none outline-none text-inherit font-mono text-[13px] leading-6"
                 style={{
-                  color: status === 'insert' ? '#56d364' : status === 'replace' ? '#e3b341' : '#e5e7eb'
+                  color: status === 'insert' ? 'var(--qzl-success)' : status === 'replace' ? 'var(--qzl-warning)' : 'var(--qzl-text)'
                 }}
               />
             ) : (
               <code
                 className={`block break-words text-left
-                  ${status === 'insert' ? 'text-[#56d364]' : ''}
-                  ${status === 'replace' ? 'text-[#e3b341]' : ''}
-                  ${status === 'equal' ? 'text-[#e5e7eb]' : ''}
+                  ${status === 'insert' ? 'text-[var(--qzl-success)]' : ''}
+                  ${status === 'replace' ? 'text-[var(--qzl-warning)]' : ''}
+                  ${status === 'equal' ? 'text-[var(--qzl-text)]' : ''}
                 `}
               >
                 {rightLines[idx] || ' '}
@@ -242,17 +242,17 @@ export default function TextDiffView({
   const diffCount = ops.filter(op => op.type !== 'equal').length;
 
   return (
-    <div className="flex flex-col h-full bg-[#181d24]" ref={containerRef}>
+    <div className="flex flex-col h-full bg-[var(--qzl-background)]" ref={containerRef}>
       {/* Toolbar */}
-      <div className="flex items-center gap-2 h-10 px-4 bg-[#12161c] border-b-2 border-[#4b5563] shrink-0">
+      <div className="flex items-center gap-2 h-10 px-4 bg-[var(--qzl-background-strong)] border-b-2 border-[var(--qzl-border)] shrink-0">
         <button
           onClick={() => setEditMode(!editMode)}
-          className={`btn btn-sm text-xs ${editMode ? 'btn-active bg-blue-600' : ''}`}
+          className={`btn btn-sm text-xs ${editMode ? 'btn-active bg-[var(--qzl-primary)]' : ''}`}
           title="Toggle inline editing"
         >
           {editMode ? '📝 Edit Mode' : '👁️ View Mode'}
         </button>
-        <div className="w-px h-5 bg-[#4b5563]" />
+        <div className="w-px h-5 bg-[var(--qzl-border)]" />
         <button
           onClick={() => setShowContext(!showContext)}
           className={`btn btn-sm text-xs ${showContext ? 'btn-active' : ''}`}
@@ -267,10 +267,10 @@ export default function TextDiffView({
         >
           Same
         </button>
-        <div className="ml-auto text-xs text-[#6b7280]">
+        <div className="ml-auto text-xs text-[var(--qzl-text-soft)]">
           📊 {diffCount} difference{diffCount !== 1 ? 's' : ''}
           {selectedLine !== undefined && (
-            <span className="ml-3 text-blue-400">
+            <span className="ml-3 text-[var(--qzl-primary)]">
               • Line {selectedLine + 1} selected
             </span>
           )}

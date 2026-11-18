@@ -3,7 +3,7 @@
 A **free, browser-based** file and folder comparison tool — a drop-in
 replacement for Beyond Compare that requires no installation and costs nothing.
 
-Built with **Next.js 14**, **Tailwind CSS**, and the
+Built with **Next.js 16**, **Tailwind CSS**, the **QZL Design Library**, and the
 [File System Access API](https://developer.mozilla.org/en-US/docs/Web/API/File_System_Access_API).
 Everything runs in your browser; no files are ever uploaded to a server.
 
@@ -26,8 +26,9 @@ Everything runs in your browser; no files are ever uploaded to a server.
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | [Next.js 14](https://nextjs.org) (App Router) |
+| Framework | [Next.js 16](https://nextjs.org) (App Router) |
 | Styling | [Tailwind CSS v4](https://tailwindcss.com) |
+| Component library | [QZL Design Library](https://github.com/Q-Z-L-Corp/qzl-design-library) (`@qzlcorp/react`, semantic dark theme tokens) |
 | Language | TypeScript |
 | Deployment | [Vercel](https://vercel.com) |
 

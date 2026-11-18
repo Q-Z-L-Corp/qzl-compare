@@ -11,9 +11,9 @@ interface ToastProps {
 const TOAST_DURATION = 3000;
 
 const bgColorMap = {
-  success: 'border-[#2ea043] bg-[#1a3a1a] text-[#56d364]',
-  error:   'border-[#f85149] bg-[#3a1a1a] text-[#f85149]',
-  info:    'border-[#4b5563] bg-[#12161c] text-[#3b82f6]',
+  success: 'border-[var(--qzl-success)] bg-[var(--qzl-success-subtle)] text-[var(--qzl-success)]',
+  error:   'border-[var(--qzl-danger)] bg-[var(--qzl-danger-subtle)] text-[var(--qzl-danger)]',
+  info:    'border-[var(--qzl-border)] bg-[var(--qzl-background-strong)] text-[var(--qzl-primary)]',
 };
 
 const iconMap = {

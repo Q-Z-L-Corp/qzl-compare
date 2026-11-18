@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { Button } from '@qzlcorp/react';
 import type { DiffOp, ToastMessage, ComparisonOptions } from '@/types';
 import { computeLineDiff } from '@/lib/diff';
 import { countLines } from '@/lib/formatters';
@@ -14,6 +15,7 @@ import Toast from '@/components/Toast';
 import KeyboardShortcutsModal from '@/components/KeyboardShortcutsModal';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import EmptyState from '@/components/EmptyState';
+import WorkspaceHeader from '@/components/WorkspaceHeader';
 
 type DiffFilter = 'all' | 'diffs' | 'same' | 'context';
 
@@ -336,25 +338,27 @@ export default function TextComparePage() {
 
   return (
     <ErrorBoundary fallback={(error, reset) => (
-      <div className="flex h-screen bg-[#1a1a1a]">
+      <div className="flex h-screen bg-[var(--qzl-background-strong)]">
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center max-w-md">
             <div className="text-5xl mb-4">⚠️</div>
-            <h2 className="text-xl font-bold text-[#e5e7eb] mb-2">Comparison Error</h2>
-            <p className="text-gray-400 text-sm mb-6 break-words">{error.message}</p>
+            <h2 className="text-xl font-bold text-[var(--qzl-text)] mb-2">Comparison Error</h2>
+            <p className="text-[var(--qzl-text-muted)] text-sm mb-6 break-words">{error.message}</p>
             <div className="flex gap-2 justify-center">
-              <button
+              <Button
                 onClick={reset}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition"
+                variant="primary"
+                size="sm"
               >
                 Try Again
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => { setLeftText(''); setRightText(''); setDiffOps([]); }}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded font-medium transition"
+                variant="secondary"
+                size="sm"
               >
                 Reset
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -363,23 +367,18 @@ export default function TextComparePage() {
     <div className="flex flex-col h-screen overflow-hidden">
 
       {/* Title bar */}
-      <header className="flex items-center h-10 px-4 bg-[#12161c] border-b border-[#4b5563] shrink-0">
-        <div className="flex items-center gap-2 text-[#cc3333] font-bold text-sm select-none">
-          <span className="text-lg">⚖️</span>
-          <span className="tracking-tight">
-            {leftText || rightText
-              ? `${leftTitle} ↔ ${rightTitle} - Text Compare`
-              : 'Text Compare'
-            } - QZL Compare
-          </span>
-        </div>
-      </header>
+      <WorkspaceHeader
+        activeHref="/text"
+        title={leftText || rightText
+          ? `${leftTitle} ↔ ${rightTitle} - Text Compare`
+          : 'Text Compare'}
+      />
 
       {/* Menu bar */}
       <MenuBar menus={menus} />
 
       {/* Toolbar */}
-      <div className="flex items-center gap-0.5 h-10 px-2 bg-[#1e242c] border-b-2 border-[#4b5563] shrink-0 overflow-x-auto">
+      <div className="workspace-toolbar flex min-h-14 items-center gap-1 px-3 border-b shrink-0 overflow-x-auto">
         {/* View filter */}
         <ToolBtn icon="✱" label="All"     active={diffFilter === 'all'}     onClick={() => setDiffFilter('all')}     title="Show all lines" />
         <ToolBtn icon="≠" label="Diffs"   active={diffFilter === 'diffs'}   onClick={() => setDiffFilter('diffs')}   title="Show differences only" />
@@ -387,13 +386,13 @@ export default function TextComparePage() {
         <ToolBtn icon="⊞" label="Context" active={diffFilter === 'context'} onClick={() => setDiffFilter('context')} title="Show differences with context" />
         <ToolBtn icon="~" label="Minor"   active={showMinor} onClick={() => setShowMinor(v => !v)} title="Toggle minor (whitespace-only) differences" />
 
-        <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+        <div className="w-px h-6 bg-[var(--qzl-border)]/40 mx-0.5" />
 
         {/* Rules & Format */}
         <ToolBtn icon="📋" label="Rules"  active={showOptions} onClick={() => setShowOptions(v => !v)} title="Comparison rules & options" />
         <ToolBtn icon={comparisonOptions.showLineNumbers ? '✓' : ' '} label="Format" active={comparisonOptions.showLineNumbers} onClick={() => updateOption('showLineNumbers', !comparisonOptions.showLineNumbers)} title="Toggle line numbers" />
 
-        <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+        <div className="w-px h-6 bg-[var(--qzl-border)]/40 mx-0.5" />
 
         {/* Copy */}
         <ToolBtn icon="→" label="Copy" onClick={() => { handleRightChange(textRef.current.left);  addToast('Copied left → right', 'success'); }} disabled={!leftText}  title="Copy left → right (Ctrl+L)" accent />
@@ -401,7 +400,7 @@ export default function TextComparePage() {
 
         {showInlineTools && inlineTools && (
           <>
-            <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+            <div className="w-px h-6 bg-[var(--qzl-border)]/40 mx-0.5" />
             {(inlineTools.canUndo || inlineTools.canRedo) && (
               <>
                 <ToolBtn icon="↶" label="Undo" onClick={inlineTools.undo} disabled={!inlineTools.canUndo} title="Undo (Ctrl/Cmd+Z)" />
@@ -411,13 +410,13 @@ export default function TextComparePage() {
           </>
         )}
 
-        <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+        <div className="w-px h-6 bg-[var(--qzl-border)]/40 mx-0.5" />
 
         {/* Section navigation */}
         <ToolBtn icon="↓" label="Next Section" onClick={() => navigateSection(1)}  disabled={!hasDiffs} title="Next diff section (F8)" />
         <ToolBtn icon="↑" label="Prev Section" onClick={() => navigateSection(-1)} disabled={!hasDiffs} title="Previous diff section (F7)" />
 
-        <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+        <div className="w-px h-6 bg-[var(--qzl-border)]/40 mx-0.5" />
 
         {/* Swap & Clear */}
         <ToolBtn icon="⇄" label="Swap"  onClick={handleSwap}  disabled={!leftText && !rightText} title="Swap left and right sides" />
@@ -425,8 +424,8 @@ export default function TextComparePage() {
 
         {hasDiffs && (
           <>
-            <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
-            <span className="text-[11px] text-[#6b7280] px-1 tabular-nums select-none whitespace-nowrap">
+            <div className="w-px h-6 bg-[var(--qzl-border)]/40 mx-0.5" />
+            <span className="text-[11px] text-[var(--qzl-text-soft)] px-1 tabular-nums select-none whitespace-nowrap">
               {diffCount} diff{diffCount !== 1 ? 's' : ''} • {diffSections.length} section{diffSections.length !== 1 ? 's' : ''}
             </span>
           </>
@@ -438,8 +437,8 @@ export default function TextComparePage() {
         <button
           onClick={() => setShowShortcuts(true)}
           title="Keyboard shortcuts (?)"
-          className="w-6 h-6 flex items-center justify-center rounded bg-[#252d37] border border-[#4b5563]/50
-                     text-[#6b7280] hover:text-[#e5e7eb] hover:bg-[#374151] transition-colors text-xs font-bold ml-1"
+          className="w-6 h-6 flex items-center justify-center rounded bg-[var(--qzl-surface)] border border-[var(--qzl-border)]/50
+                     text-[var(--qzl-text-soft)] hover:text-[var(--qzl-text)] hover:bg-[var(--qzl-surface-muted)] transition-colors text-xs font-bold ml-1"
           aria-label="Show keyboard shortcuts"
         >
           ?
@@ -448,13 +447,13 @@ export default function TextComparePage() {
 
       {/* Rules panel (flyout) */}
       {showOptions && (
-        <div className="flex items-center gap-4 px-3 py-2 bg-[#252d37] border-b border-[#4b5563] shrink-0 text-xs">
+        <div className="flex items-center gap-4 px-3 py-2 bg-[var(--qzl-surface)] border-b border-[var(--qzl-border)] shrink-0 text-xs">
           <div className="flex items-center gap-1.5">
-            <label className="text-[#9ca3af] whitespace-nowrap">Whitespace:</label>
+            <label className="text-[var(--qzl-text-muted)] whitespace-nowrap">Whitespace:</label>
             <select
               value={comparisonOptions.ignoreWhitespace}
               onChange={e => updateOption('ignoreWhitespace', e.target.value as ComparisonOptions['ignoreWhitespace'])}
-              className="px-1.5 py-0.5 bg-[#374151] text-[#e5e7eb] border border-[#4b5563] rounded text-xs"
+              className="px-1.5 py-0.5 bg-[var(--qzl-surface-muted)] text-[var(--qzl-text)] border border-[var(--qzl-border)] rounded text-xs"
             >
               <option value="none">None</option>
               <option value="trailing">Trailing</option>
@@ -462,23 +461,23 @@ export default function TextComparePage() {
               <option value="changes">Changes</option>
             </select>
           </div>
-          <label className="flex items-center gap-1 text-[#9ca3af] cursor-pointer whitespace-nowrap">
-            <input type="checkbox" checked={comparisonOptions.caseSensitive}    onChange={e => updateOption('caseSensitive',    e.target.checked)} className="accent-[#cc3333]" />
+          <label className="flex items-center gap-1 text-[var(--qzl-text-muted)] cursor-pointer whitespace-nowrap">
+            <input type="checkbox" checked={comparisonOptions.caseSensitive}    onChange={e => updateOption('caseSensitive',    e.target.checked)} className="accent-[var(--qzl-primary)]" />
             Case sensitive
           </label>
-          <label className="flex items-center gap-1 text-[#9ca3af] cursor-pointer whitespace-nowrap">
-            <input type="checkbox" checked={comparisonOptions.ignoreLineEndings} onChange={e => updateOption('ignoreLineEndings', e.target.checked)} className="accent-[#cc3333]" />
+          <label className="flex items-center gap-1 text-[var(--qzl-text-muted)] cursor-pointer whitespace-nowrap">
+            <input type="checkbox" checked={comparisonOptions.ignoreLineEndings} onChange={e => updateOption('ignoreLineEndings', e.target.checked)} className="accent-[var(--qzl-primary)]" />
             Ignore line endings
           </label>
-          <label className="flex items-center gap-1 text-[#9ca3af] cursor-pointer whitespace-nowrap">
-            <input type="checkbox" checked={comparisonOptions.showLineNumbers}  onChange={e => updateOption('showLineNumbers',  e.target.checked)} className="accent-[#cc3333]" />
+          <label className="flex items-center gap-1 text-[var(--qzl-text-muted)] cursor-pointer whitespace-nowrap">
+            <input type="checkbox" checked={comparisonOptions.showLineNumbers}  onChange={e => updateOption('showLineNumbers',  e.target.checked)} className="accent-[var(--qzl-primary)]" />
             Line numbers
           </label>
         </div>
       )}
 
       {/* Main content: always show editor + diff view */}
-      <main className="flex-1 overflow-hidden flex flex-col bg-[#181d24]">
+      <main className="flex-1 overflow-hidden flex flex-col bg-[var(--qzl-background)]">
         <TextCompareView
           ops={filteredOps}
           leftText={leftText}
@@ -498,14 +497,14 @@ export default function TextComparePage() {
       </main>
 
       {/* Status bar */}
-      <footer className="flex justify-between items-center h-8 px-4 bg-[#12161c] border-t-2 border-[#4b5563] text-xs text-[#9ca3af] shrink-0 font-medium">
+      <footer className="workspace-status flex justify-between items-center h-9 px-4 border-t text-xs shrink-0 font-medium">
         <span className="flex items-center gap-2">
-          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#3b82f6] text-white text-[9px] font-bold">i</span>
+          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[var(--qzl-primary)] text-white text-[9px] font-bold">i</span>
           <span>{statusMsg}</span>
         </span>
         <div className="flex items-center gap-4">
-          {statusRight && <span className="text-[#6b7280] text-[11px]">{statusRight}</span>}
-          {diffFilter !== 'all' && <span className="text-[#cc3333] text-[11px]">Filter: {diffFilter}</span>}
+          {statusRight && <span className="text-[var(--qzl-text-soft)] text-[11px]">{statusRight}</span>}
+          {diffFilter !== 'all' && <span className="text-[var(--qzl-primary)] text-[11px]">Filter: {diffFilter}</span>}
         </div>
       </footer>
 
@@ -517,12 +516,12 @@ export default function TextComparePage() {
       {/* About dialog */}
       {showAbout && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60" onClick={() => setShowAbout(false)}>
-          <div className="bg-[#252d37] border border-[#4b5563] rounded-xl shadow-2xl p-6 max-w-sm text-center" onClick={e => e.stopPropagation()}>
+          <div className="bg-[var(--qzl-surface)] border border-[var(--qzl-border)] rounded-xl shadow-2xl p-6 max-w-sm text-center" onClick={e => e.stopPropagation()}>
             <div className="text-5xl mb-3">⚖️</div>
-            <h2 className="text-xl font-bold text-[#e5e7eb] mb-1">QZL Compare</h2>
-            <p className="text-sm text-[#9ca3af] mb-2">Version 0.1.0</p>
-            <p className="text-xs text-[#6b7280] mb-4">Free browser-based file &amp; folder comparison tool.<br/>All processing happens locally — files are never uploaded.</p>
-            <button onClick={() => setShowAbout(false)} className="px-4 py-2 bg-[#cc3333] hover:bg-[#a12828] text-white rounded-lg text-sm font-semibold transition-colors">Close</button>
+            <h2 className="text-xl font-bold text-[var(--qzl-text)] mb-1">QZL Compare</h2>
+            <p className="text-sm text-[var(--qzl-text-muted)] mb-2">Version 0.1.0</p>
+            <p className="text-xs text-[var(--qzl-text-soft)] mb-4">Free browser-based file &amp; folder comparison tool.<br/>All processing happens locally — files are never uploaded.</p>
+            <Button onClick={() => setShowAbout(false)} variant="primary" size="sm">Close</Button>
           </div>
         </div>
       )}

@@ -96,17 +96,17 @@ export default function KeyboardShortcutsModal({ onClose, mode = 'file' }: Keybo
       aria-label="Keyboard Shortcuts"
     >
       <div
-        className="bg-[#1e242c] border border-[#4b5563] rounded-xl shadow-2xl w-full max-w-md overflow-hidden"
+        className="bg-[var(--qzl-surface)] border border-[var(--qzl-border)] rounded-xl shadow-2xl w-full max-w-md overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 bg-[#12161c] border-b border-[#4b5563]">
-          <h2 className="text-sm font-bold text-[#e5e7eb] flex items-center gap-2">
+        <div className="flex items-center justify-between px-5 py-3 bg-[var(--qzl-background-strong)] border-b border-[var(--qzl-border)]">
+          <h2 className="text-sm font-bold text-[var(--qzl-text)] flex items-center gap-2">
             <span aria-hidden="true">⌨️</span> Keyboard Shortcuts
           </h2>
           <button
             onClick={onClose}
-            className="text-[#6b7280] hover:text-[#e5e7eb] transition-colors text-lg leading-none px-1"
+            className="text-[var(--qzl-text-soft)] hover:text-[var(--qzl-text)] transition-colors text-lg leading-none px-1"
             aria-label="Close"
           >
             ✕
@@ -117,25 +117,25 @@ export default function KeyboardShortcutsModal({ onClose, mode = 'file' }: Keybo
         <div className="p-5 space-y-5 max-h-[70vh] overflow-y-auto">
           {shortcuts.map(group => (
             <div key={group.group}>
-              <h3 className="text-[10px] font-bold text-[#cc3333] uppercase tracking-widest mb-2">
+              <h3 className="text-[10px] font-bold text-[var(--qzl-primary)] uppercase tracking-widest mb-2">
                 {group.group}
               </h3>
               <table className="w-full text-sm" role="presentation">
                 <tbody>
                   {group.entries.map(entry => (
-                    <tr key={entry.description} className="border-b border-[#2d333b] last:border-0">
+                    <tr key={entry.description} className="border-b border-[var(--qzl-border)] last:border-0">
                       <td className="py-1.5 pr-4 w-1/2">
-                        <span className="text-[#9ca3af]">{entry.description}</span>
+                        <span className="text-[var(--qzl-text-muted)]">{entry.description}</span>
                       </td>
                       <td className="py-1.5 text-right">
                         <span className="flex items-center justify-end gap-1 flex-wrap">
                           {entry.keys.map((key, i) => (
                             <span key={i} className="flex items-center gap-1">
-                              <kbd className="px-2 py-0.5 bg-[#252d37] border border-[#4b5563] rounded text-[11px] text-[#e5e7eb] font-mono shadow-sm">
+                              <kbd className="px-2 py-0.5 bg-[var(--qzl-surface)] border border-[var(--qzl-border)] rounded text-[11px] text-[var(--qzl-text)] font-mono shadow-sm">
                                 {key}
                               </kbd>
                               {i < entry.keys.length - 1 && (
-                                <span className="text-[#4b5563] text-xs">+</span>
+                                <span className="text-[var(--qzl-border)] text-xs">+</span>
                               )}
                             </span>
                           ))}
@@ -150,9 +150,9 @@ export default function KeyboardShortcutsModal({ onClose, mode = 'file' }: Keybo
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 bg-[#12161c] border-t border-[#4b5563] text-center">
-          <p className="text-[11px] text-[#4b5563]">
-            Press <kbd className="px-1.5 py-0.5 bg-[#252d37] border border-[#4b5563] rounded text-[10px] font-mono">?</kbd> anytime to open this panel
+        <div className="px-5 py-3 bg-[var(--qzl-background-strong)] border-t border-[var(--qzl-border)] text-center">
+          <p className="text-[11px] text-[var(--qzl-border)]">
+            Press <kbd className="px-1.5 py-0.5 bg-[var(--qzl-surface)] border border-[var(--qzl-border)] rounded text-[10px] font-mono">?</kbd> anytime to open this panel
           </p>
         </div>
       </div>

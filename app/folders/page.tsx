@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Button, Card, Input } from '@qzlcorp/react';
 import { List, type RowComponentProps } from 'react-window';
 import type { ComparisonOptions, DiffOp, DirInfo, FileInfo, FileFilterConfig, FolderTreeNode, ToastMessage } from '@/types';
 import { countLines, getFileIcon } from '@/lib/formatters';
@@ -19,6 +20,7 @@ import TabBar from '@/components/TabBar';
 import TabContent from '@/components/TabContent';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import EmptyState from '@/components/EmptyState';
+import WorkspaceHeader from '@/components/WorkspaceHeader';
 
 type SortBy = 'name' | 'size' | 'modified';
 type SortOrder = 'asc' | 'desc';
@@ -515,48 +517,45 @@ export default function FolderComparePage() {
 
   return (
     <ErrorBoundary fallback={(error, reset) => (
-      <div className="flex h-screen bg-[#1a1a1a]">
+      <div className="flex h-screen bg-[var(--qzl-background-strong)]">
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center max-w-md">
             <div className="text-5xl mb-4">⚠️</div>
-            <h2 className="text-xl font-bold text-[#e5e7eb] mb-2">Comparison Error</h2>
-            <p className="text-gray-400 text-sm mb-6 break-words">{error.message}</p>
+            <h2 className="text-xl font-bold text-[var(--qzl-text)] mb-2">Comparison Error</h2>
+            <p className="text-[var(--qzl-text-muted)] text-sm mb-6 break-words">{error.message}</p>
             <div className="flex gap-2 justify-center">
-              <button
+              <Button
                 onClick={reset}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition"
+                variant="primary"
+                size="sm"
               >
                 Try Again
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded font-medium transition"
+                variant="secondary"
+                size="sm"
               >
                 Reset
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       </div>
     )}>
     <div className="flex flex-col h-screen overflow-hidden">
-      <header className="flex items-center h-10 px-4 bg-[#12161c] border-b border-[#4b5563] shrink-0">
-        <div className="flex items-center gap-2 text-[#cc3333] font-bold text-sm select-none">
-          <span className="text-lg">⚖️</span>
-          <span className="tracking-tight">Folder Compare - QZL Compare</span>
-        </div>
-      </header>
+      <WorkspaceHeader activeHref="/folders" title="Folder Compare" />
 
       <MenuBar menus={menus} />
 
-      <div className="flex items-center gap-0.5 h-10 px-2 bg-[#1e242c] border-b border-[#4b5563] shrink-0 overflow-x-auto">
+      <div className="workspace-toolbar flex min-h-14 items-center gap-1 px-3 border-b shrink-0 overflow-x-auto">
         <ToolBtn icon="📂" label="Open Left" onClick={() => openFolder('left')} />
         <ToolBtn icon="📂" label="Open Right" onClick={() => openFolder('right')} />
         <ToolBtn icon="↻" label="Refresh" onClick={refreshFolders} disabled={!activeLeftDir && !activeRightDir} />
 
         {showInlineTools && inlineTools && (
           <>
-            <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+            <div className="w-px h-6 bg-[var(--qzl-border)]/40 mx-0.5" />
             {(inlineTools.canUndo || inlineTools.canRedo) && (
               <>
                 <ToolBtn icon="↶" label="Undo" onClick={inlineTools.undo} disabled={!inlineTools.canUndo} title="Undo (Ctrl/Cmd+Z)" />
@@ -566,37 +565,35 @@ export default function FolderComparePage() {
           </>
         )}
 
-        <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+        <div className="w-px h-6 bg-[var(--qzl-border)]/40 mx-0.5" />
         <ToolBtn icon="≠" label="Diffs" active={statusFilter === 'different'} onClick={() => setStatusFilter('different')} />
         <ToolBtn icon="✱" label="All" active={statusFilter === 'all'} onClick={() => setStatusFilter('all')} />
         <ToolBtn icon="=" label="Same" active={statusFilter === 'same'} onClick={() => setStatusFilter('same')} />
         <ToolBtn icon="L" label="Left only" active={statusFilter === 'left-only'} onClick={() => setStatusFilter('left-only')} />
         <ToolBtn icon="R" label="Right only" active={statusFilter === 'right-only'} onClick={() => setStatusFilter('right-only')} />
-        <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+        <div className="w-px h-6 bg-[var(--qzl-border)]/40 mx-0.5" />
         {/* Search input */}
-        <input
+        <Input
           type="text"
           placeholder="🔍 Filter by name..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="h-6 px-2 text-xs bg-[#252d37] text-[#e5e7eb] border border-[#4b5563]/60 rounded
-                     placeholder:text-[#6b7280] focus:outline-none focus:border-[#cc3333]
-                     transition-colors"
+          className="!min-h-9 !h-9 !w-56 !rounded-xl !px-3 !py-1.5 !text-xs"
           title="Search files by name (case-insensitive)"
         />
-        <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+        <div className="w-px h-6 bg-[var(--qzl-border)]/40 mx-0.5" />
         <ToolBtn icon="📄" label="Files only" active={filesOnlyMode} onClick={() => setFilesOnlyMode(v => !v)} />
-        <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
+        <div className="w-px h-6 bg-[var(--qzl-border)]/40 mx-0.5" />
         {activeTab?.type === 'folder' && (
-          <span className="px-2 text-[11px] text-[#9ca3af] select-none whitespace-nowrap">
+          <span className="px-2 text-[11px] text-[var(--qzl-text-muted)] select-none whitespace-nowrap">
             {longPressGuide}
           </span>
         )}
         <ToolBtn icon="⚙️" label="Filters" onClick={() => setShowFilterDialog(true)} />
         {activeFileTab && (
           <>
-            <div className="w-px h-6 bg-[#4b5563]/40 mx-0.5" />
-            <span className="text-[11px] text-[#6b7280] px-1 tabular-nums select-none whitespace-nowrap">
+            <div className="w-px h-6 bg-[var(--qzl-border)]/40 mx-0.5" />
+            <span className="text-[11px] text-[var(--qzl-text-soft)] px-1 tabular-nums select-none whitespace-nowrap">
               {activeDiffCount} diff{activeDiffCount !== 1 ? 's' : ''}
             </span>
           </>
@@ -607,7 +604,7 @@ export default function FolderComparePage() {
       <TabBar tabs={tabs} activeTabId={activeTabId} onSwitch={setActiveTabId} onClose={closeTab} />
 
       {activeTab?.type === 'folder' && (
-        <div className="grid shrink-0 bg-[#181d24]" style={{ gridTemplateColumns: '1fr 3px 1fr' }}>
+        <div className="grid shrink-0 bg-[var(--qzl-background)]" style={{ gridTemplateColumns: '1fr 3px 1fr' }}>
           <PathBar
             sideLabel="Left folder"
             path={activeLeftLabel}
@@ -615,7 +612,7 @@ export default function FolderComparePage() {
             onOpen={() => openFolder('left')}
             fsApiSupported={fsApiSupported}
           />
-          <div className="bg-[#4b5563]/30" />
+          <div className="bg-[var(--qzl-border)]/30" />
           <PathBar
             sideLabel="Right folder"
             path={activeRightLabel}
@@ -626,7 +623,7 @@ export default function FolderComparePage() {
         </div>
       )}
 
-      <main className="flex-1 overflow-hidden flex flex-col bg-[#181d24]">
+      <main className="flex-1 overflow-hidden flex flex-col bg-[var(--qzl-background)]">
         {isLoading ? (
           <LoadingView message={loadingMsg} />
         ) : (
@@ -726,12 +723,12 @@ export default function FolderComparePage() {
         )}
       </main>
 
-      <footer className="flex justify-between items-center h-8 px-4 bg-[#12161c] border-t-2 border-[#4b5563] text-xs text-[#9ca3af] shrink-0 font-medium">
+      <footer className="workspace-status flex justify-between items-center h-9 px-4 border-t text-xs shrink-0 font-medium">
         <span className="flex items-center gap-2">
-          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#3b82f6] text-white text-[9px] font-bold">i</span>
+          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[var(--qzl-primary)] text-white text-[9px] font-bold">i</span>
           <span>{activeFolderState ? activeFolderState.statusMsg : statusMsg}</span>
         </span>
-        <span className="text-[#6b7280] text-[11px]">{activeFolderState ? activeFolderState.statusRight : statusRight}</span>
+        <span className="text-[var(--qzl-text-soft)] text-[11px]">{activeFolderState ? activeFolderState.statusRight : statusRight}</span>
       </footer>
 
       <Toast toasts={toasts} onRemove={removeToast} />
@@ -752,12 +749,12 @@ export default function FolderComparePage() {
 
       {showAbout && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60" onClick={() => setShowAbout(false)}>
-          <div className="bg-[#252d37] border border-[#4b5563] rounded-xl shadow-2xl p-6 max-w-sm text-center" onClick={e => e.stopPropagation()}>
+          <div className="bg-[var(--qzl-surface)] border border-[var(--qzl-border)] rounded-xl shadow-2xl p-6 max-w-sm text-center" onClick={e => e.stopPropagation()}>
             <div className="text-5xl mb-3">⚖️</div>
-            <h2 className="text-xl font-bold text-[#e5e7eb] mb-1">QZL Compare</h2>
-            <p className="text-sm text-[#9ca3af] mb-2">Tabbed Folder Workspace</p>
-            <p className="text-xs text-[#6b7280] mb-4">Immediate folder preview, flexible file matching, and per-tab diff state.</p>
-            <button onClick={() => setShowAbout(false)} className="btn">Close</button>
+            <h2 className="text-xl font-bold text-[var(--qzl-text)] mb-1">QZL Compare</h2>
+            <p className="text-sm text-[var(--qzl-text-muted)] mb-2">Tabbed Folder Workspace</p>
+            <p className="text-xs text-[var(--qzl-text-soft)] mb-4">Immediate folder preview, flexible file matching, and per-tab diff state.</p>
+            <Button onClick={() => setShowAbout(false)} variant="primary" size="sm">Close</Button>
           </div>
         </div>
       )}
@@ -801,25 +798,24 @@ function PathBar({ sideLabel, path, placeholder, onOpen, fsApiSupported }: {
   fsApiSupported: boolean;
 }) {
   return (
-    <div className="flex flex-col bg-[#1e242c] overflow-hidden">
-      <div className="flex items-center justify-between gap-2 px-3 py-1.5 border-b border-[#4b5563]/25 text-[11px] uppercase tracking-[0.16em] text-[#6b7280]">
+    <div className="flex flex-col bg-[var(--qzl-surface)] overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-3 py-1.5 border-b border-[var(--qzl-border)]/25 text-[11px] uppercase tracking-[0.16em] text-[var(--qzl-text-soft)]">
         <span>{sideLabel}</span>
-        <span className="text-[#9ca3af] normal-case tracking-normal">{path ? 'Selected' : 'Empty'}</span>
+        <span className="text-[var(--qzl-text-muted)] normal-case tracking-normal">{path ? 'Selected' : 'Empty'}</span>
       </div>
       <div className="flex items-center gap-1 px-2 py-1.5">
-        <input
+        <Input
           type="text"
           readOnly
           value={path}
           placeholder={placeholder}
           title={path || placeholder}
-          className="flex-1 min-w-0 h-7 px-2 text-[13px] font-mono bg-[#12161c] text-[#e5e7eb] border border-[#4b5563]/60 rounded
-                     placeholder:text-[#4b5563] truncate outline-none focus:border-[#cc3333]/60 cursor-default"
+          className="!min-h-9 !h-9 !min-w-0 !flex-1 !rounded-xl !px-3 !py-1.5 !text-[13px] !font-mono truncate cursor-default"
         />
         {fsApiSupported && (
           <button
             onClick={onOpen}
-            className="shrink-0 w-7 h-7 flex items-center justify-center rounded bg-[#252d37] border border-[#4b5563]/50 text-[#9ca3af] hover:text-[#e5e7eb] hover:bg-[#374151] transition-colors"
+            className="shrink-0 w-7 h-7 flex items-center justify-center rounded bg-[var(--qzl-surface)] border border-[var(--qzl-border)]/50 text-[var(--qzl-text-muted)] hover:text-[var(--qzl-text)] hover:bg-[var(--qzl-surface-muted)] transition-colors"
             title="Browse for folder"
           >
             📂
@@ -839,29 +835,29 @@ function FilterDialog({ config, onApply, onClose }: {
   const [exclude, setExclude] = useState(config.excludePatterns);
   return (
     <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/60" onClick={onClose}>
-      <div className="bg-[#252d37] border border-[#4b5563] rounded-xl shadow-2xl p-6 w-[420px]" onClick={e => e.stopPropagation()}>
-        <h2 className="text-lg font-bold text-[#e5e7eb] mb-4">🔍 File Filters</h2>
+      <Card className="w-[min(420px,calc(100vw-2rem))] p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+        <h2 className="text-lg font-bold text-[var(--qzl-text)] mb-4">🔍 File Filters</h2>
         <div className="space-y-3">
-          <input
+          <Input
             type="text"
             value={include}
             onChange={e => setInclude(e.target.value)}
             placeholder="Include: *.ts, *.tsx"
-            className="w-full px-3 py-2 text-sm bg-[#12161c] text-[#e5e7eb] border border-[#4b5563] rounded-lg outline-none focus:border-[#cc3333] font-mono"
+            className="!font-mono"
           />
-          <input
+          <Input
             type="text"
             value={exclude}
             onChange={e => setExclude(e.target.value)}
             placeholder="Exclude: *.log, *.tmp"
-            className="w-full px-3 py-2 text-sm bg-[#12161c] text-[#e5e7eb] border border-[#4b5563] rounded-lg outline-none focus:border-[#cc3333] font-mono"
+            className="!font-mono"
           />
         </div>
         <div className="flex gap-2 justify-end mt-4">
-          <button onClick={onClose} className="btn">Cancel</button>
-          <button onClick={() => onApply({ includePatterns: include, excludePatterns: exclude })} className="btn btn-active">Apply</button>
+          <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" size="sm" onClick={() => onApply({ includePatterns: include, excludePatterns: exclude })}>Apply</Button>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
@@ -942,24 +938,24 @@ function FolderTreeWorkspace({
   }), [sortedAndFlattened, scopePath, selectedItems, onExpand, onOpenFileTab, onOpenFolderTab, onSelectItem]);
 
   return (
-    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-[#252d37]">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-[var(--qzl-surface)]">
       {ignoredDirNames.length > 0 && (
-        <div className="flex items-start gap-2 px-4 py-2 bg-[#3a2a1e] border-b border-[#e3b341]/40 text-[#f4c878] text-xs shrink-0">
+        <div className="flex items-start gap-2 px-4 py-2 bg-[var(--qzl-warning-subtle)] border-b border-[var(--qzl-warning)]/40 text-[var(--qzl-warning)] text-xs shrink-0">
           <span className="shrink-0 mt-0.5 text-sm">⚠️</span>
           <span>Skipped {ignoredDirNames.length} ignored director{ignoredDirNames.length !== 1 ? 'ies' : 'y'}: <span className="font-mono text-[11px]">{ignoredDirNames.join(', ')}</span></span>
         </div>
       )}
 
-      <div className="flex items-center px-4 py-1.5 bg-[#12161c] border-b border-[#4b5563] text-[11px] font-semibold text-[#3b82f6] shrink-0">
-        <button className="flex-1 min-w-0 text-left hover:text-[#79c0ff]" onClick={() => onSortChange('name')}>Name</button>
+      <div className="flex items-center px-4 py-1.5 bg-[var(--qzl-background-strong)] border-b border-[var(--qzl-border)] text-[11px] font-semibold text-[var(--qzl-primary)] shrink-0">
+        <button className="flex-1 min-w-0 text-left hover:text-[var(--qzl-primary)]" onClick={() => onSortChange('name')}>Name</button>
         <div className="w-14 text-center">Status</div>
-        <button className="w-16 text-right hover:text-[#79c0ff]" onClick={() => onSortChange('size')}>Size</button>
-        <button className="w-32 text-right hover:text-[#79c0ff]" onClick={() => onSortChange('modified')}>Modified</button>
+        <button className="w-16 text-right hover:text-[var(--qzl-primary)]" onClick={() => onSortChange('size')}>Size</button>
+        <button className="w-32 text-right hover:text-[var(--qzl-primary)]" onClick={() => onSortChange('modified')}>Modified</button>
       </div>
 
       <div ref={containerRef} className="flex-1 min-h-0 overflow-hidden">
         {sortedAndFlattened.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-[#6b7280]">
+          <div className="flex items-center justify-center h-full text-[var(--qzl-text-soft)]">
             <div className="text-center px-6">
               <div className="text-3xl mb-2">📭</div>
               <p>No items to display</p>
@@ -1022,14 +1018,14 @@ function CompareRow({ index, style, ...data }: RowComponentProps<{
   return (
     <div
       style={style}
-      className={`grid grid-cols-[minmax(0,1fr)_56px_minmax(0,1fr)] items-stretch px-2 border-b border-[#2a2a3a] transition-colors ${ROW_BG[node.status] ?? ''} ${canOpenCompare ? 'cursor-pointer' : ''}`}
+      className={`grid grid-cols-[minmax(0,1fr)_56px_minmax(0,1fr)] items-stretch px-2 border-b border-[var(--qzl-border)] transition-colors ${ROW_BG[node.status] ?? ''} ${canOpenCompare ? 'cursor-pointer' : ''}`}
       onDoubleClick={() => {
         if (node.isDirectory) data.onOpenFolderTab(node);
         else if (canOpenCompare) data.onOpenFileTab(node);
       }}
     >
       <div
-        className={`min-w-0 flex items-center gap-1.5 px-2 py-1 rounded-sm select-none ${hasLeft ? 'cursor-pointer' : ''} ${leftSelected ? 'bg-[#1f6feb]/20 ring-1 ring-inset ring-[#1f6feb]/40' : ''}`}
+        className={`min-w-0 flex items-center gap-1.5 px-2 py-1 rounded-sm select-none ${hasLeft ? 'cursor-pointer' : ''} ${leftSelected ? 'bg-[var(--qzl-primary)]/20 ring-1 ring-inset ring-[var(--qzl-primary)]/40' : ''}`}
         style={{ paddingLeft: indent + 8 }}
         onPointerDown={(event) => beginLongPress('left', event)}
         onPointerUp={cancelLongPress}
@@ -1045,7 +1041,7 @@ function CompareRow({ index, style, ...data }: RowComponentProps<{
                   e.stopPropagation();
                   data.onExpand(node.path);
                 }}
-                className="text-[10px] text-[#6b7280] w-3 shrink-0 hover:text-[#e5e7eb]"
+                className="text-[10px] text-[var(--qzl-text-soft)] w-3 shrink-0 hover:text-[var(--qzl-text)]"
                 title={node.expanded ? 'Collapse folder' : 'Expand folder'}
               >
                 {node.expanded ? '▾' : '▸'}
@@ -1054,7 +1050,7 @@ function CompareRow({ index, style, ...data }: RowComponentProps<{
               <span className="w-3 shrink-0" />
             )}
             <span className="shrink-0">{node.isDirectory ? '📁' : getFileIcon(node.name)}</span>
-            <span className="truncate text-[13px] text-[#e5e7eb] font-medium">{node.name}</span>
+            <span className="truncate text-[13px] text-[var(--qzl-text)] font-medium">{node.name}</span>
           </div>
         )}
       </div>
@@ -1064,7 +1060,7 @@ function CompareRow({ index, style, ...data }: RowComponentProps<{
       </div>
 
       <div
-        className={`min-w-0 flex items-center justify-end gap-1.5 px-2 py-1 rounded-sm select-none ${hasRight ? 'cursor-pointer' : ''} ${rightSelected ? 'bg-[#bb8009]/20 ring-1 ring-inset ring-[#bb8009]/40' : ''}`}
+        className={`min-w-0 flex items-center justify-end gap-1.5 px-2 py-1 rounded-sm select-none ${hasRight ? 'cursor-pointer' : ''} ${rightSelected ? 'bg-[var(--qzl-warning)]/20 ring-1 ring-inset ring-[var(--qzl-warning)]/40' : ''}`}
         onPointerDown={(event) => beginLongPress('right', event)}
         onPointerUp={cancelLongPress}
         onPointerCancel={cancelLongPress}
@@ -1073,7 +1069,7 @@ function CompareRow({ index, style, ...data }: RowComponentProps<{
       >
         {hasRight && (
           <div className="flex items-center gap-1 min-w-0 justify-end">
-            <span className="truncate text-[13px] text-[#e5e7eb] font-medium">{node.name}</span>
+            <span className="truncate text-[13px] text-[var(--qzl-text)] font-medium">{node.name}</span>
             <span className="shrink-0">{node.isDirectory ? '📁' : getFileIcon(node.name)}</span>
             {node.isDirectory ? (
               <button
@@ -1081,7 +1077,7 @@ function CompareRow({ index, style, ...data }: RowComponentProps<{
                   e.stopPropagation();
                   data.onExpand(node.path);
                 }}
-                className="text-[10px] text-[#6b7280] w-3 shrink-0 hover:text-[#e5e7eb]"
+                className="text-[10px] text-[var(--qzl-text-soft)] w-3 shrink-0 hover:text-[var(--qzl-text)]"
                 title={node.expanded ? 'Collapse folder' : 'Expand folder'}
               >
                 {node.expanded ? '▾' : '▸'}
@@ -1139,15 +1135,15 @@ function sortTree(nodes: FolderTreeNode[], sortBy: SortBy, sortOrder: SortOrder)
 }
 
 const STATUS_META: Record<string, { sym: string; cls: string }> = {
-  same: { sym: '✓', cls: 'text-[#56d364]' },
-  different: { sym: '✕', cls: 'text-[#f85149]' },
-  'left-only': { sym: '◀', cls: 'text-[#79c0ff]' },
-  'right-only': { sym: '▶', cls: 'text-[#56d364]' },
+  same: { sym: '✓', cls: 'text-[var(--qzl-success)]' },
+  different: { sym: '✕', cls: 'text-[var(--qzl-danger)]' },
+  'left-only': { sym: '◀', cls: 'text-[var(--qzl-primary)]' },
+  'right-only': { sym: '▶', cls: 'text-[var(--qzl-success)]' },
 };
 
 const ROW_BG: Record<string, string> = {
-  same: 'hover:bg-[rgba(255,255,255,0.02)]',
-  different: 'bg-[rgba(248,81,73,0.07)] hover:bg-[rgba(248,81,73,0.13)]',
-  'left-only': 'bg-[rgba(121,192,255,0.07)] hover:bg-[rgba(121,192,255,0.13)]',
-  'right-only': 'bg-[rgba(86,211,100,0.07)] hover:bg-[rgba(86,211,100,0.13)]',
+  same: 'folder-row--same',
+  different: 'folder-row--different',
+  'left-only': 'folder-row--left-only',
+  'right-only': 'folder-row--right-only',
 };
